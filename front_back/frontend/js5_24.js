@@ -334,7 +334,8 @@ var xhr = null;
         xhr = getXmlHttpRequestObject();
         xhr.onreadystatechange = sendDataCallback;
         // asynchronous requests
-        xhr.open("POST", "http://localhost:7000/users", true);
+		xhr.open("POST", "http://127.0.0.1:7000/users", true);
+        // xhr.open("POST", "http://localhost:7000/users", true);
         xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
         // Send the request over the network
         xhr.send(JSON.stringify({"data": dataToSend}));
