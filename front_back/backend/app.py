@@ -10,7 +10,8 @@
 # python3 -c "import sys; print(sys.path)"
 # python3 -m venv venv
 # alias activate=". ../.env/bin/activate"
-# pip install flask flask-cors
+# pip install flask flask-cors spacy
+# python3 -m spacy download en_core_web_sm
 
 # npm install -g http-server
 # run js/html: http-server

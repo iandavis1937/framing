@@ -314,7 +314,8 @@ var xhr = null;
         xhr = getXmlHttpRequestObject();
         xhr.onreadystatechange = dataCallback;
         // asynchronous requests
-        xhr.open("GET", "http://localhost:7000/users", true);
+		xhr.open("GET", "http://127.0.0.1:7000/users", true);
+        // xhr.open("GET", "http://localhost:7000/users", true);
         // Send the request over the network
         xhr.send(null);
     }
