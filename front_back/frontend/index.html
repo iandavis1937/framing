@@ -1,0 +1,28 @@
+<html>
+<header>
+    <title>Test page</title>
+</header>
+
+
+<!-- Define HTML elements with ids so we can dynamically
+    add text/data to those elements later with JavaScript -->
+<body>
+    <div>This is simple test to get data from a backend</div>
+    <div><span>Last update: </span><span id="time-container"></span></div>
+    <div>
+        <label for="data-input">Data to send:</label>
+        <input type="text" id="data-input">
+        <button id="send-data-button">Send data</button>
+    </div>
+    <div>
+        <div id="sent-data-container"></div>
+    </div>
+    <hr>
+    <div>
+        <button id="get-users-button">Get user data</button>
+        <div id="result-container"></div>
+    </div>
+</body>
+<script type="module" src="js5_24.js" defer></script>
+
+</html>
