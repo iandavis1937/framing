@@ -17,12 +17,25 @@
 # run js/html: http-server
 
 import sys
+import logging
 from flask import Flask, request
 import flask
 import json
 from flask_cors import CORS
 import spacy
 nlp = spacy.load('en_core_web_sm')
+
+
+# Create a logger
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)  # Set level to DEBUG to see all messages
+
+# Create a console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)  # Ensure all messages are handled
+
+# Add the console handler to the logger
+logger.addHandler(console_handler)
 
 # https://subscription.packtpub.com/book/data/9781838987312/2/ch02lvl1sec13/splitting-sentences-into-clauses
 
