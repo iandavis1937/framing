@@ -82,7 +82,7 @@ def sendData():
     received_data = request.get_json()
     print(f"Received data: {received_data}")
     print(f"Keys: {received_data.keys()}")
-    data_string = received_data['participant_input']
+    data_string = received_data['open_response']
     if data_string is None:
             # Return a response indicating 'data' is missing.
                 return flask.jsonify({'missingData': 'Missing data field'}), 400
