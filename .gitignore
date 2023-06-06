@@ -1,0 +1,17 @@
+# Ignore virtual environment directories
+venv/
+env/
+.venv/
+
+# Ignore node
+node_modules/
+
+# Ignore IDE and editor files
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Ignore system and temporary files
+__pycache__/
+*.pyc
+.DS_Store

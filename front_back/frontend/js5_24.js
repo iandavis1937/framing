@@ -1,15 +1,15 @@
 
 
 // **Part 0: Logging**
-const winston = require('winston');
+// const winston = require('winston');
 
-const logger = winston.createLogger({
-  level: 'debug',  // Set level to 'debug' to see all messages
-  format: winston.format.simple(),
-  transports: [
-    new winston.transports.Console()
-  ]
-});
+// const logger = winston.createLogger({
+//   level: 'debug',  // Set level to 'debug' to see all messages
+//   format: winston.format.simple(),
+//   transports: [
+//     new winston.transports.Console()
+//   ]
+// });
 
 
 // **Part 1: Loading the Data**
