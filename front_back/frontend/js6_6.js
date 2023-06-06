@@ -69,19 +69,30 @@ app.use(bodyParser.json());
   
 input = "./study2.csv"
 
-let output_array = [];
+let participant_result = [];
+let flask_output_arr = [];
 async function getData(input) {
 	return fs.readFile(input, 'utf8')
 		.then(async csvText => {
 			const fileData_raw = parseCSV(csvText, ",");
-			console.log(fileData_raw[1])
+			console.log("Header: ", fileData_raw[1])
 			for (const open_response of fileData_raw) {
 				try {
 					console.log("Sending data to Flask endpoint...");
 					const flask_output = await axios.post('http://127.0.0.1:5000/flask_output', open_response);
 					console.log("Received response from Flask:", flask_output.data);
-				
+					// Push the data into flask_outputs array
+					flask_output_arr.push(flask_output.data);
+				} catch (err) {
+					console.error(err); // or do something more sophisticated with the error
+				}
+			}
+			return flask_output_arr; // return the flask_outputs array
+		});
+}
 
+				
+/*
 // // Define the POST route for "/node_to_flask"
 // app.post('/node_to_flask', async (req, res) => {
 	// console.log("Req Headers: ", req.headers);
@@ -92,25 +103,34 @@ async function getData(input) {
 		// 	}
 		for (let key in flask_output) {
 				console.log(`${key}: ${flask_output[key]}`);
-					}
+		}
+		// flask_output.forEach((response, index) => {
 			let flask_status = flask_output.data.status
 			// let flask_message = flask_output.data.message
+			let part_id = flask_output.data.part_id;
 			let response_str = flask_output.data.clauses_text;	     										            	   	       		// let flask_message = req.body.messasge
 			console.log("Status: ", flask_status, "Response String: ", response_str)
 			console.log(typeof response_str);
+*/
 			
 
 // **Part 2: Analyzing the Clauses from Flask**
 // Process data and generate a result
-	let part_id
+async function analyze(flask_output_arr) {
+	flask_output_arr.forEach((flask_output_row) => {
+	let part_id = flask_output_row.part_id;
+	participant_result.part_id = part_id
+	participant_result.input = ''
+	participant_result.net_score = 0
+	participant_result.opinion_frames = []
+	participant_result.opinion_frames_t2 = 0
+	participant_result.fact_frames = []
+	participant_result.fact_frames_t2 = 0
 	let response;
 	let response_words;
-	let response_characters;
 	let opinion_frames;
 	let fact_frames;
-	// After getting a row, define variables for each column
-	// part_id = data[i].part_id
-	// console.log(part_id)
+	let response_str = flask_output_row.clauses_text;
 	let response_arr = response_str.split('][');
 	console.log("Response Array: ", response_arr);
 	response_arr.forEach((response, index) => {
@@ -221,13 +241,13 @@ async function getData(input) {
 				);
 			});
 			console.log("Op Frame Filtered Fact Frames: ", JSON.parse(JSON.stringify(fact_frames)))
+				
 	
-	
-			// const result = {};
-			// result.part_id = part_id
-			// result.opinion_frames_t2 = opinion_frames.length
-			// result.fact_frames_t2 = fact_frames.length
-			// result.net_score = opinion_frames_t2 - fact_frames_t2
+			// const clause_result = {};
+			// clause_result.part_id = part_id
+			// clause_result.opinion_frames_t2 = opinion_frames.length
+			// clause_result.fact_frames_t2 = fact_frames.length
+			// clause_result.net_score = opinion_frames_t2 - fact_frames_t2
 			
 			let opinion_frames_t2 = opinion_frames.length
 			let fact_frames_t2 = fact_frames.length
@@ -235,7 +255,7 @@ async function getData(input) {
 			
 			
 	
-			const result = {
+			const clause_result = {
 				part_id: part_id,
 				input: response,
 				net_score: net_score,
@@ -244,50 +264,57 @@ async function getData(input) {
 				opinion_frames: opinion_frames.map(obj => JSON.stringify(obj)).join(", "),
 				fact_frames: fact_frames.map(obj => JSON.stringify(obj)).join(", ")
 				};
-				console.log("Result: ", JSON.parse(JSON.stringify(result)))
+			// console.log("Clause Result: ", JSON.parse(JSON.stringify(clause_result)))
+
+			//Update participant_result directly here
+			participant_result.input += '__' + clause_result.input;
+			participant_result.net_score += clause_result.net_score;
+			if(clause_result.opinion_frames) { 
+				participant_result.opinion_frames.push(clause_result.opinion_frames);
+			}
+			participant_result.opinion_frames_t2 += clause_result.opinion_frames_t2;
+			if(clause_result.fact_frames) { 
+				participant_result.fact_frames.push(clause_result.fact_frames);
+			}
+			participant_result.fact_frames_t2 += clause_result.fact_frames_t2;
 	
 			// Display result in html
 			// const output = document.getElementById('output');
 			// output.textContent = `Net score: ${net_score}\nOpinion frames: ${opinion_frames_t2}\nFact frames: ${fact_frames_t2}`;
-	
-	
-			// Push to output array
-			output_array.push(result);
-	
+			
+			// Parsing nested JSON strings
+			// participant_result.opinion_frames = participant_result.opinion_frames.replace(/} {/g, ';')
+			// participant_result.fact_frames = participant_result.fact_frames.replace(/} {/g, ';')
+			// participant_result.opinion_frames = participant_result.opinion_frames.replace(/{/g, '')
+			// participant_result.opinion_frames = participant_result.opinion_frames.replace(/}/g, '')
+			// participant_result.fact_frames = participant_result.fact_frames.replace(/{/g, '')
+			// participant_result.fact_frames = participant_result.fact_frames.replace(/}/g, '')
 		
 	});	
 		
-	console.log("Output Array: ", output_array)
+	console.log("Participant Result: ", participant_result)
 		
-	let summary = output_array.reduce((accumulator, currentObj) => {
-		accumulator.input = accumulator.input + ' ' + currentObj.input;
-		accumulator.net_score += currentObj.net_score;
-		accumulator.opinion_frames = accumulator.opinion_frames + ' ' + currentObj.opinion_frames;
-		accumulator.opinion_frames_t2 += currentObj.opinion_frames_t2;
-		accumulator.fact_frames = accumulator.fact_frames + ' ' + currentObj.fact_frames;
-		accumulator.fact_frames_t2 += currentObj.fact_frames_t2;
-		return accumulator;
-	},
-	{input: '', net_score: 0, opinion_frames: '', opinion_frames_t2: 0,  fact_frames: '', fact_frames_t2: 0});
 
-	console.log("Summary: ", summary);
 
+
+	/*
 	let out_net = summary.net_score
 	let out_op_num = summary.opinion_frames_t2
 	let out_fp_num = summary.fact_frames_t2
 	let out_op = summary.opinion_frames
 	let out_fp = summary.fact_frames
+	*/
 		
 		//let op_txt = opinion_frames.map(arr => arr.match);
 		//let fact_txt = fact_frames.map(arr => arr.match);
 		//console.log(op_txt)
 		//console.log(fact_txt)
 	
-		// const out_net = ["Net Score: ", result.net_score]
-		// const out_op = ["Opnion Phrases: ", result.opinion_phrases_t2, ", ", op_txt]
-		// const out_fp = ["Fact Phrases: ", result.fact_phrases_t2, ", ", fact_txt]
-		// const out_op2 = ["Opnion Phrases: ", result.opinion_phrases_t2, ", ", op_txt.join("; ")]
-		// const out_fp2 = ["Fact Phrases: ", result.fact_phrases_t2, ", ", fact_txt.join("; ")]
+		// const out_net = ["Net Score: ", clause_result.net_score]
+		// const out_op = ["Opnion Phrases: ", clause_result.opinion_phrases_t2, ", ", op_txt]
+		// const out_fp = ["Fact Phrases: ", clause_result.fact_phrases_t2, ", ", fact_txt]
+		// const out_op2 = ["Opnion Phrases: ", clause_result.opinion_phrases_t2, ", ", op_txt.join("; ")]
+		// const out_fp2 = ["Fact Phrases: ", clause_result.fact_phrases_t2, ", ", fact_txt.join("; ")]
 		
 		//let out_op2 = summary.opinion_frames.join("; ")
 		//let out_fp2 = summary.fact_frames.join("; ")
@@ -319,27 +346,32 @@ async function getData(input) {
 	// 	op_frames: out_op,
 	// 	fact_frames: out_fp
 	// });
-	} catch (error) {
-		console.error("An error occurred:", error);
-		// res.status(500).json({status: "error", message: "Internal server error"});
-	}
-}
-let csv = Papa.unparse(output_array);
 
-fs.writeFile('./output.csv', csv, (err) => {
-    if (err) throw err;
-    console.log('The file has been saved!');
+	return participant_result
+	});
+}; // end of loop through participant response
+
+// });
+// }; 
+
+
+getData(input).then(() => {
+	console.log("Flask Output Arr: ", flask_output_arr);
+	const js_output = analyze(flask_output_arr)
 });
 
+/*
+getData(input).then((summary) => {
+	console.log("CSV to be: ", summary)
+	const csv = Papa.unparse([summary], {
+	  header: true
+	});
+	console.log("almost a file: ", csv)
+	require('fs').writeFileSync('./output.csv', csv);
 });
-}; 
+*/
 
-
-getData(input)
-
-
-
-//// To be deprecated ////////////////////
+/*/// To be deprecated ////////////////////
 //////////////////////////////////////////
 app.post('/from_flask_to_node', async (req, res) => {
     console.log("Receiving data from Flask endpoint reached...");
@@ -355,7 +387,7 @@ app.post('/from_flask_to_node', async (req, res) => {
 
     res.json(flask_output.data);
 });
-//////////////////////////////////////////
+/////////////////////////////////////////*/
 
 
 
