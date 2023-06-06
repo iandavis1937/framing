@@ -26,10 +26,7 @@ from flask_cors import CORS
 import requests
 import spacy, benepar
 nlp = spacy.load('en_core_web_md')
-if spacy.__version__.startswith('2'):
-        nlp.add_pipe(benepar.BeneparComponent("benepar_en3"))
-    else:
-        nlp.add_pipe("benepar", config={"model": "benepar_en3"})
+nlp.add_pipe('benepar', config={'model': 'benepar_en3'})
 
 ## Create a logger
 # logger = logging.getLogger()
@@ -44,7 +41,6 @@ if spacy.__version__.startswith('2'):
 
 # https://subscription.packtpub.com/book/data/9781838987312/2/ch02lvl1sec13/splitting-sentences-into-clauses
 
-"""
 def find_root_of_sentence(doc):
     root_tokens = []
     for token in doc:
@@ -72,76 +68,6 @@ def get_clause_token_span_for_verb(verb, doc, all_verbs):
             if (child.i > last_token_index):
                 last_token_index = child.i
     return(first_token_index, last_token_index)
-"""
-
-# class ClauseSegmentation:
-#   """Use the benepar tree to split sentences and blind entities."""
-  
-# def __init__(self, nlp: Language, name: str):
-#     self.nlp = nlp
-#     self.name = name
-
-
-def benepar_split(self, doc: Doc) -> list[tuple]:
-    """Split a doc into individual clauses
-    doc (Doc): Input doc containing one or more sentences
-    RETURNS (List[Tuple]): List of extracted clauses, defined by their start-end offsets
-    """
-    split_indices = []
-    for sentence in doc.sents:
-        can_split = False
-        for constituent in sentence._.constituents:
-            # Store start/end indices of clauses labeled "S" (Sentence) if their parent is the original sentence
-            if "S" in constituent._.labels and constituent._.parent == sentence:
-                split_indices.append((constituent.start, constituent.end))
-                can_split = True
-
-        # If no clause found, append the start/end indices of the whole sentence
-        if not can_split:
-            split_indices.append((sentence.start, sentence.end))
-
-    return split_indices
-  
-def getClauses(self, doc: Doc):
-    """Extract clauses and save the split indices in a custom attribute"""
-    clauses = []
-    split_indices = self.benepar_split(doc)
-    for index_start, index_end in split_indices:
-        current_span = doc[index_start : index_end]
-        if len(current_span.ents) != 0:
-            for entity in current_span.ents:
-                clauses.append(
-                    {
-                        "split_indices": (index_start,index_end),
-                        "has_ent": True,
-                        "ent_indices": (entity.start, entity.end),
-                        "blinder": f"_{entity.label_}_",
-                        "ent_name": entity.text,
-                        "cats": {},
-                    }
-                )
-        else:
-            clauses.append(
-                {
-                    "split_indices": (index_start,index_end),
-                    "has_ent": False,
-                    "ent_indices": (0, 0),
-                    "blinder": None,
-                    "ent_name": None,
-                    "cats": {},
-                }
-            )
-
-    # Check if ._.clauses exists and only overwrite when len() == 0
-    if not doc.has_extension("clauses") or (
-        doc.has_extension("clauses") and len(doc._.clauses) == 0
-    ):
-        doc.set_extension("clauses", default={}, force=True)
-        doc._.clauses = clauses
-
-    return doc
-  
-
 
 app = Flask(__name__)
 CORS(app)
@@ -165,8 +91,6 @@ def sendData():
     doc = nlp(data_string)
     for token in doc:
         print(f"Token: {token.text}, POS: {token.pos_}, DEP: {token.dep_}, Is Alphabetic: {token.is_alpha}")
-    
-    """
     root_tokens = find_root_of_sentence(doc)
     print(f"Root: {root_tokens}")
     other_verbs = find_other_verbs(doc, root_tokens)
@@ -190,8 +114,6 @@ def sendData():
     sentence_clauses = sorted(sentence_clauses, 
                             key=lambda tup: tup[0])
     clauses_list = [clause.text for clause in sentence_clauses]
-    """
-    
     # print(f"Clauses list: {clauses_list}")
     return_data = {
         "status": "success",
