@@ -30,7 +30,7 @@ curl -X POST -F "csvFile=@C:/.../study2.csv" http://localhost:8080/csv
 ```
 
 #### Qualtrics integration
-![Qualtrics Integration](https://github.com/iandavis1937/framing/tree/main/readme_files/qualtrics_integration.png)
+![Qualtrics Integration](./readme_files/qualtrics_integration.png)
 
  To make a call to framing from within a Qualtrics survey, first set the respondent's text response as an embedded variable. Then, send it to framing via a web service block like above.
 
