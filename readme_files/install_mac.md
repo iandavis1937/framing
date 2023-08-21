@@ -6,10 +6,17 @@
 
 ```bash
 # Verify Homebrew is ready:
-cd /opt/homebrew
+brew
 
 # Install Homebrew if not ready
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# >>> <password>
+# Add Homebrew to your PATH in ~/.zprofile: copy the 2 commands suggested by Homebrew
+# They look like these:
+# echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+# eval "$(/opt/homebrew/bin/brew shellenv)"
+
+brew doctor
 brew update
 brew cleanup
 brew install wget
