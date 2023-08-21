@@ -6,7 +6,6 @@
 
 ```bash
 # MacOS (Verify Homebrew is ready):
-sudo su -
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 brew update
 brew cleanup
