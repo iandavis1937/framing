@@ -45,34 +45,15 @@ git clone https://github.com/iandavis1937/framing
 cd /usr/local/bin/framing/py
 ```
 -  If not already installed, install Miniconda to manage Python packages.
-	- Check your system architecture under the Apple menu > About this Mac. Use the corresponding Intel x86 or M1 instructions below.
- 	- Note: there is a yes/no (with default no) after the 'Export;Cryptography' section of the Miniconda user agreement. Press Enter up to this header and then slow down.
+	- Check your system architecture under the Apple menu > About this Mac. Choose the corresponding Intel x86 or M1 installer [here](https://docs.conda.io/en/latest/miniconda.html).
 
 ```bash
-# Note the directory has to be changed to wherever framing is installed. 
-# In the examples, framing is installed in /var/www/ 
-
-# Intel x86
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
-# or
-# M1
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh
-
-bash miniconda3/miniconda.sh -b -u -p
-# >>> yes
-# >>> /<your>/<path>/miniconda3
-# >>> yes
 export PATH="/<your>/<path>/miniconda3/bin:$PATH"
 echo 'export PATH="/<your>/<path>/miniconda3/bin:$PATH"' >> ~/.bash_profile
 conda --version
 conda update conda
 
 # Ex.
-wget https://repo.anaconda.com/miniconda3/Miniconda3-latest-MacOSX-x86_64.sh
-bash Miniconda3-latest-MacOSX-x86_64.sh
-# >>> yes
-# >>> /Users/username/miniconda3 -u
-# >>> yes
 export PATH=" /Users/username/miniconda3/bin:$PATH"
 echo 'export PATH=" /Users/username/miniconda3/bin:$PATH"' >> ~/.bash_profile
 conda --version
