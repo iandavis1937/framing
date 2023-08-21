@@ -5,7 +5,10 @@
 
 
 ```bash
-# MacOS (Verify Homebrew is ready):
+# Verify Homebrew is ready:
+cd /opt/homebrew
+
+# Install Homebrew if not ready
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 brew update
 brew cleanup
