@@ -174,7 +174,7 @@ cd /usr/local/bin/framing/js/
 
 - If not already installed, install Node (JS).
 ```bash
-brew install node@lts
+brew install node
 brew link --force --overwrite node@lts
 node -v
 ```
