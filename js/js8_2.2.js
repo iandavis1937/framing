@@ -10,6 +10,7 @@ const Papa = require('papaparse');
 const winston = require('winston');
 const { type } = require('os');
 const zeromq = require('zeromq');
+const path = require('path');
 
 // Create a Winston logger
 const logger = winston.createLogger({
@@ -495,12 +496,13 @@ app.post('/csv', upload.single('csvFile'), async (req, res) => {
     // console.log("finalFile: ", finalFile); // logs CSV string
 
     // To write this to a file:
-    outputFilePath = 'output8_2.2_b2.csv' 
+    outputFilePath = 'output8_2.2_b2.csv';
     fs.writeFile(outputFilePath, finalFile, function(err) {
         if (err) {
-        console.log('File saved');
-        res.status(500).json({ status: "error", message: "An error occurred while processing the request." });
+            console.log('Error saving the file:', err);
+            res.status(500).json({ status: "error", message: "An error occurred while processing the request." });
         } else {
+            console.log('File saved at:', path.resolve(outputFilePath));  // This prints the absolute path
             res.download(outputFilePath); // This will prompt file download
         }
     });
