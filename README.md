@@ -11,6 +11,7 @@ The algorithm also returns the text that triggered the classification as a opini
 Importantly, framing splits text responses into clauses before classifying each clause as an opinion frame, fact frame, NHS, or none of the above. This is the primary function of the Python script and the spaCy/benepar packages.
 
 # User Guide
+Note that, throughout this guide, '<>' denotes text to specify for your specific setup.
 ### Make a Call to a Running Instance of framing 
 Once framing is deployed on a server, it can receive text inputs as individual strings or csv files.
 #### Via terminal
@@ -22,7 +23,9 @@ Once framing is deployed on a server, it can receive text inputs as individual s
  curl -X POST -H "Content-Type: application/json" -d '{"participant_input":"I think this is test 1. This is test 2. I support adding an NHS test."}' http://localhost:8080/string
 ```
 
- - To send input as a csv file, send an application/json POST request to  http://<your.server.ip.address>:8080/csv. The string's header should be 'participant_input'.
+ - To send input as a csv file, first install framing.
+ - Then, move your file to the /data/ folder within /framing/.
+ - Send an application/json POST request to  http://<your.server.ip.address>:8080/csv. The string's header should be 'participant_input'.
  
 ```bash
  # Ex. -- change IP address as needed
