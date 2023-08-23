@@ -1,0 +1,866 @@
+---
+title: "Subjective Qualifier Algorithm Evaluation"
+output: html_document
+date: "2023-04-21"
+---
+# R setup
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+here <- dirname(rstudioapi::getActiveDocumentContext()$path)
+setwd(here)
+getwd()
+list.files("../Manual Coding/")
+```
+
+```{r library, include=FALSE}
+library(pacman)
+p_load(gtools, broom, stringr, tidyverse, dplyr)
+```
+
+# Run this block to run Ruby
+```{r}
+ruby_to_manu <- TRUE
+g <- "G:/Shared drives/Dialogue across divide/"
+ruby_path <- paste0(g,"JavaScript_Framing_Algo/ruby_repl_package/output91.1_ruby_labels_clnSpaces.csv")
+manual_path <- paste0(g,"Manual Coding/2016_manual_coding_batch2_v2.csv")
+output_path <- paste0(g,"JavaScript_Framing_Algo/r_output/batch_2/manu_ruby_v2.csv")
+comp_table_path <- paste0(g,"JavaScript_Framing_Algo/r_output/batch_2/algo_comp_table_batch2_v3.csv")
+
+if (ruby_to_manu == TRUE) {
+ruby <- read.csv(ruby_path)
+js <- ruby %>% dplyr::rename(opinion_frames_ = opinion_phrases,
+                             fact_frames_ = fact_phrases,
+                             fact_frames_t2 = fact_phrases_t2,
+                             opinion_frames_t2 = opinion_phrases_t2,
+                             fact_frames_label = fact_phrases_label,
+                             opinion_frames_label = opinion_phrases_label) %>%
+              mutate(clauses = NA_character_, clauses_t2 = 1, net_score = fact_frames_t2-opinion_frames_t2,
+                     across(where(is.character), ~tolower(.x))) #%>%
+              #filter(part_id < 685, part_id > 580)
+}
+
+manual <- read.csv(manual_path) %>%
+          discard(~all(is.na(.) | . =="")) #%>%      
+          #select(-op_diff, -fact_diff)
+```
+
+# Run this block to run JS
+```{r}
+## To edit:
+js_filename <- "batch_2/output8_2.2.csv"
+manual_filename <- "2016_manual_coding_batch2_v2.csv"
+output_filename <- "batch_2/manu_spaCy_8_2.2_v2.csv"
+comp_table_filename <- "batch_2/algo_comp_table_batch2_v3.csv"
+##
+
+ruby_to_manu <- FALSE
+
+g <- "G:/Shared drives/Dialogue across divide/"
+js_path <- paste0(g,"JavaScript_Framing_Algo/js_output/", js_filename)
+manual_path <- paste0(g,"Manual Coding/", manual_filename)
+output_path <- paste0(g,"JavaScript_Framing_Algo/r_output/", output_filename)
+comp_table_path <- paste0(g,"JavaScript_Framing_Algo/r_output/", comp_table_filename)
+
+
+if (ruby_to_manu == FALSE) {
+  js <- read.csv(js_path)
+}
+
+manual <- read.csv(manual_path) %>%
+          discard(~all(is.na(.) | . =="")) #%>%      
+          #select(-op_diff, -fact_diff)
+```
+
+# Local functions
+```{r, local functions}
+
+littleElements_in_bigElements <- function(littleElements, bigElements) {
+  out <- sapply(littleElements, function(x) {
+            if(any(sapply(bigElements, function(y) grepl(x, y, fixed = TRUE)))){
+              return(x)
+            }
+          })
+  out <- out[!sapply(out, is.null)]
+  if(length(out) == 0){
+    out <- list() # return empty list if no match found
+  } else {
+    out <- unname(unlist(out))
+  }
+  return(out)
+}
+
+elems_of_v1_w_matches_in_v2 <- function(v1, v2) {
+  out <- sapply(v1, function(x) {
+    x_sub <- if(nchar(x) >= 2) substr(x, 2, min(nchar(x),15)) else x
+    matches <- sapply(v2, function(y) {
+      y_sub <- if(nchar(y) >= 2) substr(y, 2, min(nchar(y),15)) else y
+      grepl(x_sub, y, fixed = TRUE) || grepl(y_sub, x, fixed = TRUE)
+    })
+    if(any(matches)){
+      return(x)
+    }
+  })
+  out <- out[!sapply(out, is.null)]
+  if(length(out) == 0){
+    out <- list() # return empty list if no match found
+  } else {
+    out <- unname(unlist(out))
+  }
+  return(out)
+}
+
+anyMatch <- function(v1, v2) {
+  # Function to check if any element of vector1 is in any element of vector2
+  compare_elements <- function(vector1, vector2) {
+    matches <- sapply(vector1, function(x) {
+      if(any(sapply(vector2, function(y) grepl(x, y, fixed = TRUE)))) {
+        return(x)
+      }
+    })
+    matches <- matches[!sapply(matches, is.null)]
+    if(length(matches) == 0){
+      matches <- list() # return empty list if no match found
+    } else {
+      matches <- unname(unlist(matches))
+    }
+    return(matches)
+  }
+
+  matches1 <- compare_elements(v1, v2)   # Get elements of v1 found in v2
+  matches2 <- compare_elements(v2, v1)   # Get elements of v2 found in v1
+  return(unique(c(matches1, matches2))) # Combine and return the results
+}
+
+
+littleElements <- c('i think',NA,'i believe',NA)
+bigElements <- c(NA,'i think that trump is',NA,'i believe in a free economy',NA,'this is a fact')
+t <- littleElements_in_bigElements(littleElements[!is.na(littleElements)], bigElements[!is.na(bigElements)])
+t
+class(t)
+names(t)
+
+
+#v1 <- c('i think','i believe','i am very sure the truth is important.')
+#v2 <- c('i think that trump is','i believe in a free economy','this is a fact','i am very sure')
+v1 <- c('i think',NA,'i believe',NA,'i am very sure the truth is important.')
+v2 <- c(NA,'i think that trump is',NA,'i believe in a free economy',NA,'this is a fact',NA,'i am very sure')
+t <- anyMatch(v1[!is.na(v1)], v2[!is.na(v2)])
+t
+class(t)
+names(t)
+
+elems_of_v1_w_matches_in_v2(v1[!is.na(v1)], v2[!is.na(v2)])
+  
+
+```
+
+
+
+# Join manual & algorithm coding
+```{r}
+df <- left_join(manual, js, by = c("part_id"="part_id")) %>% arrange(part_id) 
+
+df <- df %>% mutate(ffram_diff = ffram_sum - fact_frames_t2,
+                    opfram_diff = opfram_sum - opinion_frames_t2,
+                    #across(where(is.character), ~str_squish(.x)),
+                    across(ends_with(c("_txt","_frames", "_clauses")), ~tolower(.x)),
+                    across(ends_with(c("_txt","_frames", "_clauses")), ~gsub("\"","",.x,fixed = T))) %>%
+              dplyr::rename(opfram_num_js = opinion_frames_t2,
+                            ffram_num_js = fact_frames_t2) %>%
+            select(-ends_with("_str"))
+
+if ("nhs_frames_t2" %in% names(df)) {
+  df <- df %>% rename(nhs_num_js = nhs_frames_t2)
+}
+```
+
+# Split to one frame/clause per cell
+## For ruby only
+```{r, ruby}
+# For ruby only
+if (ruby_to_manu == TRUE){
+  df$ffram_txt <- gsub(";\n", "]]", df$ffram_txt); df$ffram_txt <- gsub("; \n", "]]", df$ffram_txt)
+  df$opfram_txt <- gsub(";\n", "]]", df$opfram_txt); df$opfram_txt <- gsub("; \n", "]]", df$opfram_txt)
+  if ("nhs_txt" %in% names(df)) {
+    df$nhs_txt <- gsub(";\n", "]]", df$nhs_txt); df$nhs_txt <- gsub("; \n", "]]", df$nhs_txt)
+    df$no_cat_txt <- gsub(";\n", "]]", df$no_cat_txt); df$no_cat_txt <- gsub("; \n", "]]", df$no_cat_txt)
+  }
+  raw_compare1to1 <- df %>%
+    relocate(ends_with("_frames_"), .after = last_col()) %>%
+    separate_wider_delim(fact_frames_:last_col(),"] ", names_sep = "", too_few = "align_start") %>%
+    rename_with(~ifelse(str_detect(.x, "\\d$"), paste0(.x, "_match"), .x)) %>%
+    mutate(across(contains("_frames_"), ~na_if(.x,""))) %>%
+    relocate(ends_with("_label"), .after = last_col()) %>%
+    rename(fact_frames_ = fact_frames_label, opinion_frames_ = opinion_frames_label) %>%
+    separate_wider_delim(cols = fact_frames_:opinion_frames_,
+                         ",",names_repair = "unique",names_sep="", too_few = "align_start") %>%
+    rename_with(~ifelse(str_detect(.x, "\\d$"), paste0(.x, "_label"), .x)) %>% #,"sent")) %>%
+    # now the manual coding
+    separate_wider_delim(ends_with("_txt"), "]]", names_sep = ".", too_few = "align_start") %>%
+    #separate_wider_delim(ends_with("_regex"), ", ", names_sep = ".", too_few = "align_start") %>%
+    mutate(across(where(is.character), ~str_squish(.x)),
+           across(where(is.character), ~na_if(.x,""))) %>%
+    arrange(part_id)
+}
+```
+
+## For JS only
+```{r}
+#separate_wider_delim(ffram_txt, ";\n", names_sep = ".", too_few = "align_start")
+if (ruby_to_manu == FALSE){
+  df$ffram_txt <- gsub(";\n", "]]", df$ffram_txt); df$ffram_txt <- gsub("; \n", "]]", df$ffram_txt)
+  df$opfram_txt <- gsub(";\n", "]]", df$opfram_txt); df$opfram_txt <- gsub("; \n", "]]", df$opfram_txt)
+  if ("nhs_txt" %in% names(df)) {
+  df$nhs_txt <- gsub(";\n", "]]", df$nhs_txt); df$nhs_txt <- gsub("; \n", "]]", df$nhs_txt)
+  df$no_cat_txt <- gsub(";\n", "]]", df$no_cat_txt); df$no_cat_txt <- gsub("; \n", "]]", df$no_cat_txt)
+  }
+  
+  # Separate JS output into one frame/clause per column (in each row)
+  raw_compare1to1 <- df %>% 
+    separate_wider_delim(ends_with("_frames"),"}", names_sep = "_", too_few = "align_start") %>%
+    mutate(across(contains("_frames_"), ~na_if(.x,""))) %>%
+    separate_wider_delim(cols = contains("_frames_"),
+                         ",label:",names_sep = "_",names=c("match","label")) %>% #,"sent")) %>% 
+    mutate(across(ends_with("_match"), ~str_split_i(.x, "match:", 2))) %>%
+    relocate(ends_with(c("_match","_label")), .after = last_col())
+  
+  if ("fact_clauses" %in% names(df)) {
+  raw_compare1to1 <- raw_compare1to1 %>% 
+    relocate(ends_with("_clauses"), .after = last_col()) %>%
+    separate_wider_delim(cols = opinion_clauses:last_col(), "]]", names_sep = ".", too_few = "align_start") %>%
+    mutate(copy_clauses = clauses) %>% 
+    separate_wider_delim(copy_clauses,"][", names_sep = "_", too_few = "align_start") %>%
+    mutate(across(contains("copy_clauses"), ~na_if(.x,"")))
+  }
+  
+  # now separate the manually coded frames/clauses
+  raw_compare1to1 <- raw_compare1to1 %>% 
+    separate_wider_delim(ends_with("_txt"), "]]", names_sep = ".", too_few = "align_start") %>% 
+    #separate_wider_delim(ends_with("_regex"), ", ", names_sep = ".", too_few = "align_start") %>% 
+    mutate(across(where(is.character), ~str_squish(.x)),
+           across(where(is.character), ~na_if(.x,"")),
+           across(where(is.character), ~na_if(.x," "))) %>%
+    arrange(part_id)
+}
+```
+
+# Get column indices for collapsing
+```{r}
+# Get column indices for collapsing
+cols <- colnames(raw_compare1to1)
+js_f_start <- min(which(startsWith(cols,"fact_frames_") & endsWith(cols,"_match")))
+js_f_end <- max(which(startsWith(cols,"fact_frames_") & endsWith(cols,"_match")))
+js_labels_f_start <- min(which(startsWith(cols,"fact_frames_") & endsWith(cols,"_label")))
+js_labels_f_end <- max(which(startsWith(cols,"fact_frames_") & endsWith(cols,"_label")))
+
+js_op_start <- min(which(startsWith(cols,"opinion_frames_") & endsWith(cols,"_match")))
+js_op_end <- max(which(startsWith(cols,"opinion_frames_") & endsWith(cols,"_match")))
+js_labels_op_start <- min(which(startsWith(cols,"opinion_frames_") & endsWith(cols,"_label")))
+js_labels_op_end <- max(which(startsWith(cols,"opinion_frames_") & endsWith(cols,"_label")))
+
+manu_f_start <- min(which(startsWith(cols,"ffram_txt.")))
+manu_f_end <- max(which(startsWith(cols,"ffram_txt.")))
+manu_op_start <- min(which(startsWith(cols,"opfram_txt.")))
+manu_op_end <- max(which(startsWith(cols,"opfram_txt.")))
+
+if ("nhs_txt.1" %in% names(raw_compare1to1)) {
+  manu_nhs_start <- min(which(startsWith(cols,"nhs_txt.")))
+  manu_nhs_end <- max(which(startsWith(cols,"nhs_txt.")))
+  manu_no_cat_start <- min(which(startsWith(cols,"no_cat_txt.")))
+  manu_no_cat_end <- max(which(startsWith(cols,"no_cat_txt.")))
+}
+
+if ("fact_clauses.1" %in% names(raw_compare1to1)) {
+  js_f_cl_start <- min(which(startsWith(cols,"fact_clauses.")))
+  js_f_cl_end <- max(which(startsWith(cols,"fact_clauses.")))
+  js_op_cl_start <- min(which(startsWith(cols,"opinion_clauses.")))
+  js_op_cl_end <- max(which(startsWith(cols,"opinion_clauses.")))
+  js_cl_start <- min(which(startsWith(cols,"copy_clauses_")))
+  js_cl_end <- max(which(startsWith(cols,"copy_clauses_")))
+}
+
+if ("nhs_frames_1_match" %in% names(raw_compare1to1)) {
+  js_nhs_start <- min(which(startsWith(cols,"nhs_frames_") & endsWith(cols,"_match")))
+  js_nhs_end <- max(which(startsWith(cols,"nhs_frames_") & endsWith(cols,"_match")))
+  js_labels_nhs_start <- min(which(startsWith(cols,"nhs_frames_") & endsWith(cols,"_label")))
+  js_labels_nhs_end <- max(which(startsWith(cols,"nhs_frames_") & endsWith(cols,"_label")))
+  js_nhs_cl_start <- min(which(startsWith(cols,"nhs_clauses.")))
+  js_nhs_cl_end <- max(which(startsWith(cols,"nhs_clauses.")))
+}
+
+
+# manu_labels_f_start <- min(which(startsWith(cols,"fact_phrases_regex")))
+# manu_labels_f_end <- max(which(startsWith(cols,"fact_phrases_regex")))
+# manu_labels_op_start <- min(which(startsWith(cols,"opinion_phrases_regex")))
+# manu_labels_op_end <- max(which(startsWith(cols,"opinion_phrases_regex")))
+```
+
+# Collapse into vector cells
+```{r}
+# Collapse into vector cells
+compare1to1 <- raw_compare1to1 %>% 
+  mutate(manu_f = lapply(1:nrow(.), function(i) unname(unlist(.[i,manu_f_start:manu_f_end]))),
+         js_f = lapply(1:nrow(.), function(i) unname(unlist(.[i,js_f_start:js_f_end]))),
+         js_f_labels = lapply(1:nrow(.), function(i) unname(unlist(.[i,js_labels_f_start:js_labels_f_end]))),
+         manu_op = lapply(1:nrow(.), function(i) unname(unlist(.[i,manu_op_start:manu_op_end]))),
+         js_op = lapply(1:nrow(.), function(i) unname(unlist(.[i,js_op_start:js_op_end]))),
+         js_op_labels = lapply(1:nrow(.), function(i) unname(unlist(.[i,js_labels_op_start:js_labels_op_end]))))
+
+if ("nhs_txt.1" %in% names(raw_compare1to1)) {
+  compare1to1 <- compare1to1 %>% 
+  mutate(manu_nhs = lapply(1:nrow(.), function(i) unname(unlist(.[i,manu_nhs_start:manu_nhs_end]))),
+         manu_no_cat = lapply(1:nrow(.), function(i) unname(unlist(.[i,manu_no_cat_start:manu_no_cat_end]))))
+}
+         
+
+if ("fact_clauses.1" %in% names(raw_compare1to1)) {
+  compare1to1 <- compare1to1 %>% 
+  mutate(js_f_cl = lapply(1:nrow(.), function(i) unname(unlist(.[i,js_f_cl_start:js_f_cl_end]))),
+         js_op_cl = lapply(1:nrow(.), function(i) unname(unlist(.[i,js_op_cl_start:js_op_cl_end]))),
+         js_cl = lapply(1:nrow(.), function(i) unname(unlist(.[i,js_cl_start:js_cl_end]))))
+}
+
+if ("nhs_frames_1_match" %in% names(raw_compare1to1)) {
+  compare1to1 <- compare1to1 %>% 
+  mutate(js_nhs = lapply(1:nrow(.), function(i) unname(unlist(.[i,js_nhs_start:js_nhs_end]))),
+         js_nhs_labels = lapply(1:nrow(.), function(i) unname(unlist(.[i,js_labels_nhs_start:js_labels_nhs_end]))),
+         js_nhs_cl = lapply(1:nrow(.), function(i) unname(unlist(.[i,js_nhs_cl_start:js_nhs_cl_end]))))
+}
+```
+
+# Compute stats for each row
+```{r}
+# Compute stats for each row
+compare_list3 <- list()
+for(p in 1:nrow(compare1to1)){
+  row_p <- list(list())
+  names(row_p) <- c("response")
+  row_p$response <- compare1to1$response[[p]]
+  row_p$clauses <- compare1to1$clauses[[p]]
+  
+    # clauses which are neither fact nor opinion frames
+  if ("manu_no_cat" %in% names(compare1to1)) {
+      row_p$manu_no_cat <-  compare1to1$manu_no_cat[[p]][!is.na(compare1to1$manu_no_cat[[p]])]
+      row_p$manu_nhs <- compare1to1$manu_nhs[[p]][!is.na(compare1to1$manu_nhs[[p]])]
+      row_p$manu_nhs_num <- compare1to1$nhs_sum[[p]][!is.na(compare1to1$nhs_sum[[p]])]
+      row_p$manu_nhs_num2 <- length(row_p$manu_nhs)
+  }
+
+  # facts
+  row_p$manu_f <- compare1to1$manu_f[[p]][!is.na(compare1to1$manu_f[[p]])]
+  row_p$js_f <- compare1to1$js_f[[p]][!is.na(compare1to1$js_f[[p]])]
+  #row_p$manu_f_labels <- compare1to1$manu_f_labels[[p]][!is.na(compare1to1$manu_f_labels[[p]])]
+  row_p$js_f_labels <- compare1to1$js_f_labels[[p]][!is.na(compare1to1$js_f_labels[[p]])]
+  #row_p$matched_f <- base::intersect(row_p$js_f,row_p$manu_f)
+  #row_p$not_matched_manu_f <- base::setdiff(row_p$manu_f,row_p$js_f)
+  #row_p$not_matched_js_f <- base::setdiff(row_p$js_f,row_p$manu_f)
+  #row_p$part_matched_manu_f <- grep(paste(row_p$js_f, collapse = "|"), row_p$manu_f, fixed = TRUE, value = TRUE)
+  row_p$part_matched_manu_f <- elems_of_v1_w_matches_in_v2(row_p$manu_f[!is.na(row_p$manu_f)],
+                                                           row_p$js_f[!is.na(row_p$js_f)])
+  row_p$hit_f <- row_p$part_matched_manu_f
+  row_p$part_matched_js_f <- elems_of_v1_w_matches_in_v2(row_p$js_f[!is.na(row_p$js_f)],
+                                                         row_p$manu_f[!is.na(row_p$manu_f)])
+  #row_p$part_matched_js_f <- row_p$js_f[which(sapply(row_p$js_f,
+   #                                                  function(y) any(sapply(row_p$manu_f,
+   #                                                                   function(x) grepl(y, x, fixed = TRUE)))))]
+  row_p$miss_f <- base::setdiff(row_p$manu_f,row_p$part_matched_manu_f)
+  #row_p$manu_f[-c(unname(unlist(sapply(row_p$js_f,
+  #                function(pattern) grep(pattern, row_p$manu_f, fixed = TRUE)))))]
+  row_p$false_detection_f <- base::setdiff(row_p$js_f,row_p$part_matched_js_f)
+  #row_p$not_matched_labels_f <- c(#row_p$manu_f_labels[which(row_p$manu_f %in% row_p$not_matched_manu_f)],
+  #                              row_p$js_f_labels[which(row_p$js_f %in% row_p$not_matched_js_f)])
+  row_p$false_detection_labels_f <- c(row_p$js_f_labels[which(row_p$js_f %in% row_p$false_detection_f)])
+  row_p$manu_f_num <- compare1to1$ffram_sum[[p]][!is.na(compare1to1$ffram_sum[[p]])]
+  row_p$manu_f_num2 <- length(row_p$manu_f)
+  row_p$js_f_num <- compare1to1$ffram_num_js[[p]][!is.na(compare1to1$ffram_num_js[[p]])]
+  row_p$js_f_num2 <- length(row_p$js_f)
+  #row_p$matched_f_num <- length(row_p$matched)
+  #row_p$not_matched_manu_f_num <- length(row_p$not_matched_manu_f)
+  #row_p$not_matched_js_f_num <- length(row_p$not_matched_js_f)
+  row_p$part_matched_manu_f_num <- length(row_p$part_matched_manu_f)
+  row_p$part_matched_js_f_num <- length(row_p$part_matched_js_f)
+  row_p$hit_f_num <- length(row_p$hit_f)
+  row_p$miss_f_num <- length(row_p$miss_f)
+  row_p$false_detection_f_num <- length(row_p$false_detection_f)
+  
+  ## fact clauses
+  if ("js_f_cl" %in% names(compare1to1)) {
+    row_p$js_f_cl <- compare1to1$js_f_cl[[p]][!is.na(compare1to1$js_f_cl[[p]])]
+    row_p$part_matched_manu_f_cl <- elems_of_v1_w_matches_in_v2(row_p$manu_f[!is.na(row_p$manu_f)],
+                                                              row_p$js_f_cl[!is.na(row_p$js_f_cl)])
+    row_p$hit_f_cl <- row_p$part_matched_manu_f_cl
+    row_p$part_matched_js_f_cl <- elems_of_v1_w_matches_in_v2(row_p$js_f_cl[!is.na(row_p$js_f_cl)],
+                                                            row_p$manu_f[!is.na(row_p$manu_f)])
+    row_p$miss_f_cl <- base::setdiff(row_p$manu_f,row_p$part_matched_manu_f_cl)
+    row_p$false_detection_f_cl <- base::setdiff(row_p$js_f_cl,row_p$part_matched_js_f_cl)
+    row_p$js_f_cl_num <- length(row_p$js_f_cl)
+    row_p$hit_f_cl_num <- length(row_p$hit_f_cl)
+    row_p$miss_f_cl_num <- length(row_p$miss_f_cl)
+    row_p$false_detection_f_cl_num <- length(row_p$false_detection_f_cl)
+    row_p$f_cl_dne <- ifelse(row_p$js_f_cl_num != row_p$js_f_num2, 1, 0)
+  }
+  
+  # opinions
+  row_p$manu_op <- compare1to1$manu_op[[p]][!is.na(compare1to1$manu_op[[p]])]
+  row_p$js_op <- compare1to1$js_op[[p]][!is.na(compare1to1$js_op[[p]])]
+  row_p$js_op_labels <- compare1to1$js_op_labels[[p]][!is.na(compare1to1$js_op_labels[[p]])]
+  row_p$part_matched_manu_op <- elems_of_v1_w_matches_in_v2(row_p$manu_op[!is.na(row_p$manu_op)],
+                                                            row_p$js_op[!is.na(row_p$js_op)])
+  row_p$hit_op <- row_p$part_matched_manu_op
+  row_p$part_matched_js_op <- elems_of_v1_w_matches_in_v2(row_p$js_op[!is.na(row_p$js_op)],
+                                                          row_p$manu_op[!is.na(row_p$manu_op)])
+  row_p$miss_op <- base::setdiff(row_p$manu_op, row_p$part_matched_manu_op)
+  row_p$false_detection_op <- base::setdiff(row_p$js_op,row_p$part_matched_js_op)
+  row_p$false_detection_labels_op <- c(row_p$js_op_labels[which(row_p$false_detection_op %in% row_p$js_op)])
+  row_p$manu_op_num <- compare1to1$opfram_sum[[p]][!is.na(compare1to1$opfram_sum[[p]])]
+  row_p$manu_op_num2 <- length(row_p$manu_op)
+  row_p$js_op_num <- compare1to1$opfram_num_js[[p]][!is.na(compare1to1$opfram_num_js[[p]])]
+  row_p$js_op_num2 <- length(row_p$js_op)
+  row_p$part_matched_manu_op_num <- length(row_p$part_matched_manu_op)
+  row_p$part_matched_js_op_num <- length(row_p$part_matched_js_op)
+  row_p$hit_op_num <- length(row_p$hit_op)
+  row_p$miss_op_num <- length(row_p$miss_op)
+  row_p$false_detection_op_num <- length(row_p$false_detection_op)
+  
+  ## opinion clauses
+  if ("js_f_cl" %in% names(compare1to1)) {
+    row_p$js_op_cl <- compare1to1$js_op_cl[[p]][!is.na(compare1to1$js_op_cl[[p]])]
+    row_p$part_matched_manu_op_cl <- elems_of_v1_w_matches_in_v2(row_p$manu_op[!is.na(row_p$manu_op)],
+                                                               row_p$js_op_cl[!is.na(row_p$js_op_cl)])
+    row_p$hit_op_cl <- row_p$part_matched_manu_op_cl
+    row_p$part_matched_js_op_cl <- elems_of_v1_w_matches_in_v2(row_p$js_op_cl[!is.na(row_p$js_op_cl)],
+                                                             row_p$manu_op[!is.na(row_p$manu_op)])
+    row_p$miss_op_cl <- base::setdiff(row_p$manu_op, row_p$part_matched_manu_op_cl)
+    row_p$false_detection_op_cl <- base::setdiff(row_p$js_op_cl,row_p$part_matched_js_op_cl)
+    row_p$js_op_cl_num <- length(row_p$js_op_cl)
+    row_p$part_matched_manu_op_cl_num <- length(row_p$part_matched_manu_op_cl)
+    row_p$part_matched_js_op_cl_num <- length(row_p$part_matched_js_op_cl)
+    row_p$hit_op_cl_num <- length(row_p$hit_op_cl)
+    row_p$miss_op_cl_num <- length(row_p$miss_op_cl)
+    row_p$false_detection_op_cl_num <- length(row_p$false_detection_op_cl)
+    row_p$op_cl_dne <- ifelse(row_p$js_op_cl_num != row_p$js_op_num2, 1, 0)
+  }
+  
+  # nhs
+  if ("js_nhs" %in% names(compare1to1)) {
+      row_p$js_nhs <- compare1to1$js_nhs[[p]][!is.na(compare1to1$js_nhs[[p]])]
+      row_p$js_nhs_num <- compare1to1$nhs_num_js[[p]][!is.na(compare1to1$nhs_num_js[[p]])]
+      row_p$js_nhs_num2 <- length(row_p$js_nhs)
+      row_p$js_nhs_cl <- compare1to1$js_nhs_cl[[p]][!is.na(compare1to1$js_nhs_cl[[p]])]
+      row_p$js_nhs_cl_num <- length(row_p$js_nhs_cl)
+      row_p$js_nhs_labels <- compare1to1$js_nhs_labels[[p]][!is.na(compare1to1$js_nhs_labels[[p]])]
+      row_p$part_matched_manu_nhs <- elems_of_v1_w_matches_in_v2(row_p$manu_nhs[!is.na(row_p$manu_nhs)],
+                                                               row_p$js_nhs[!is.na(row_p$js_nhs)])
+      row_p$part_matched_js_nhs <- elems_of_v1_w_matches_in_v2(row_p$js_nhs[!is.na(row_p$js_nhs)],
+                                                                    row_p$manu_nhs[!is.na(row_p$manu_nhs)])
+      row_p$hit_nhs <- row_p$part_matched_manu_nhs
+      row_p$hit_nhs_num <- length(row_p$hit_nhs)
+      row_p$part_matched_manu_nhs_cl <- elems_of_v1_w_matches_in_v2(row_p$manu_nhs[!is.na(row_p$manu_nhs)],
+                                                                  row_p$js_nhs_cl[!is.na(row_p$js_nhs_cl)])
+      row_p$part_matched_js_nhs_cl <- elems_of_v1_w_matches_in_v2(row_p$js_nhs_cl[!is.na(row_p$js_nhs_cl)],
+                                                                    row_p$manu_nhs[!is.na(row_p$manu_nhs)])
+      row_p$hit_nhs_cl <- row_p$part_matched_manu_nhs_cl
+      row_p$hit_nhs_cl_num <- length(row_p$hit_nhs_cl)
+      row_p$miss_nhs <- base::setdiff(row_p$manu_nhs,row_p$part_matched_manu_nhs)
+      row_p$miss_nhs_cl <- base::setdiff(row_p$manu_nhs,row_p$part_matched_manu_nhs_cl)
+      row_p$miss_nhs_num <- length(row_p$miss_nhs)
+      row_p$miss_nhs_cl_num <- length(row_p$miss_nhs_cl)
+      row_p$false_detection_nhs <- base::setdiff(row_p$js_nhs,row_p$part_matched_js_nhs)
+      row_p$false_detection_nhs_cl <- base::setdiff(row_p$js_nhs_cl,row_p$part_matched_js_nhs_cl)
+      row_p$false_detection_labels_nhs <- c(row_p$js_nhs_labels[which(row_p$js_nhs %in% row_p$false_detection_nhs)])
+      row_p$false_detection_nhs_num <- length(row_p$false_detection_nhs)
+      row_p$false_detection_nhs_cl_num <- length(row_p$false_detection_nhs_cl)
+    }
+  
+   # correct rejection
+  if ("manu_no_cat" %in% names(compare1to1)) {
+      row_p$cl <- c(row_p$manu_no_cat, row_p$manu_nhs, row_p$manu_op, row_p$manu_f)
+      row_p$cl_num <- length(row_p$cl)
+      row_p$not_f_frame <- c(row_p$manu_no_cat, row_p$manu_nhs, row_p$manu_op)
+      row_p$corr_rej_f <-  base::setdiff(row_p$not_f_frame,row_p$part_matched_js_f)
+      row_p$corr_rej_f_num <- length(row_p$corr_rej_f)
+      row_p$false_rej_f <-  elems_of_v1_w_matches_in_v2(row_p$not_f_frame,row_p$js_f)
+      row_p$corr_rej_f2 <- base::setdiff(row_p$not_f_frame, row_p$false_rej_f)
+      row_p$corr_rej_f_num2 <- length(row_p$corr_rej_f2)
+      row_p$not_corr_rej_f <- c(row_p$hit_f, row_p$miss_f, row_p$false_detection_f)
+      row_p$corr_rej_f3 <-  base::setdiff(row_p$cl,row_p$not_corr_rej_f)
+      row_p$corr_rej_f_num3 <- length(row_p$corr_rej_f3)
+      row_p$not_op_frame <- c(row_p$manu_no_cat, row_p$manu_nhs, row_p$manu_f)
+      row_p$false_rej_op <-  elems_of_v1_w_matches_in_v2(row_p$not_op_oprame,row_p$js_op)
+      row_p$corr_rej_op <-  base::setdiff(row_p$not_op_frame,row_p$part_matched_js_op)
+      row_p$corr_rej_op_num <- length(row_p$corr_rej_op)
+      row_p$corr_rej_op2 <-  base::setdiff(row_p$not_op_frame,row_p$part_matched_js_op)
+      row_p$corr_rej_op_num2 <- length(row_p$corr_rej_op2)
+      row_p$not_corr_rej_op <- c(row_p$hit_op, row_p$miss_op, row_p$false_detection_op)
+      row_p$corr_rej_op3 <-  base::setdiff(row_p$cl,row_p$not_corr_rej_op)
+      row_p$corr_rej_op_num3 <- length(row_p$corr_rej_op3)
+      if ("js_f_cl" %in% names(compare1to1)) {
+        row_p$js_cl <- compare1to1$js_cl[[p]][!is.na(compare1to1$js_cl[[p]])]
+        row_p$js_cl_num <- length(row_p$js_cl)
+        row_p$not_f_cl <- c(row_p$manu_no_cat, row_p$manu_nhs, row_p$manu_op)
+        row_p$corr_rej_f_cl <-  base::setdiff(row_p$not_f_cl,row_p$part_matched_js_f_cl)
+        row_p$corr_rej_f_cl_num <- length(row_p$corr_rej_f_cl)
+        row_p$false_rej_f_cl <-  elems_of_v1_w_matches_in_v2(row_p$not_f_cl,row_p$js_f_cl)
+        row_p$corr_rej_f_cl2 <- base::setdiff(row_p$not_f_cl, row_p$false_rej_f_cl)
+        row_p$corr_rej_f_cl_num2 <- length(row_p$corr_rej_f_cl2)
+        row_p$not_corr_rej_f_cl <- c(row_p$hit_f_cl, row_p$miss_f_cl, row_p$false_detection_f_cl)
+        row_p$corr_rej_f_cl3 <-  base::setdiff(row_p$cl,row_p$not_corr_rej_f_cl)
+        row_p$corr_rej_f_cl_num3 <- length(row_p$corr_rej_f_cl3)
+        row_p$not_op_cl <- c(row_p$manu_no_cat, row_p$manu_nhs, row_p$manu_f)
+        row_p$corr_rej_op_cl <-  base::setdiff(row_p$not_op_cl,row_p$part_matched_js_op_cl)
+        row_p$corr_rej_op_cl_num <- length(row_p$corr_rej_op_cl)
+        row_p$false_rej_op_cl <-  elems_of_v1_w_matches_in_v2(row_p$not_op_cl,row_p$js_op_cl)
+        row_p$corr_rej_op_cl2 <- base::setdiff(row_p$not_op_cl, row_p$false_rej_op_cl)
+        row_p$corr_rej_op_cl_num2 <- length(row_p$corr_rej_op_cl2)
+        row_p$not_corr_rej_op_cl <- c(row_p$hit_op_cl, row_p$miss_op_cl, row_p$false_detection_op_cl)
+        row_p$corr_rej_op_cl3 <-  base::setdiff(row_p$cl,row_p$not_corr_rej_op_cl)
+        row_p$corr_rej_op_cl_num3 <- length(row_p$corr_rej_op_cl3)
+      }
+      if ("js_nhs" %in% names(compare1to1)) {
+        row_p$not_nhs <- c(row_p$manu_no_cat, row_p$manu_op, row_p$manu_f)
+        row_p$corr_rej_nhs <-  base::setdiff(row_p$not_nhs,row_p$part_matched_js_nhs)
+        row_p$corr_rej_nhs_num <- length(row_p$corr_rej_nhs)
+        row_p$false_rej_nhs <-  elems_of_v1_w_matches_in_v2(row_p$not_nhs,row_p$js_nhs)
+        row_p$corr_rej_nhs2 <- base::setdiff(row_p$not_nhs, row_p$false_rej_nhs)
+        row_p$corr_rej_nhs_num2 <- length(row_p$corr_rej_nhs2)
+        row_p$not_corr_rej_nhs <- c(row_p$hit_nhs, row_p$miss_nhs, row_p$false_detection_nhs)
+        row_p$corr_rej_nhs3 <-  base::setdiff(row_p$cl,row_p$not_corr_rej_nhs)
+        row_p$corr_rej_nhs_num3 <- length(row_p$corr_rej_nhs3)
+        row_p$not_nhs_cl <- c(row_p$manu_no_cat, row_p$manu_op, row_p$manu_f)
+        row_p$corr_rej_nhs_cl <-  base::setdiff(row_p$not_nhs_cl,row_p$part_matched_js_nhs_cl)
+        row_p$corr_rej_nhs_cl_num <- length(row_p$corr_rej_nhs_cl)
+        row_p$false_rej_nhs_cl <-  elems_of_v1_w_matches_in_v2(row_p$not_nhs_cl,row_p$js_nhs_cl)
+        row_p$corr_rej_nhs_cl2 <- base::setdiff(row_p$not_nhs_cl, row_p$false_rej_nhs_cl)
+        row_p$corr_rej_nhs_cl_num2 <- length(row_p$corr_rej_nhs_cl2)
+        row_p$not_corr_rej_nhs_cl <- c(row_p$hit_nhs_cl, row_p$miss_nhs_cl, row_p$false_detection_nhs_cl)
+        row_p$corr_rej_nhs_cl3 <-  base::setdiff(row_p$cl,row_p$not_corr_rej_nhs_cl)
+        row_p$corr_rej_nhs_cl_num3 <- length(row_p$corr_rej_nhs_cl3)
+      }
+  }
+  
+  compare_list3[[p]] <- row_p
+}
+names(compare_list3) <- compare1to1$part_id
+```
+
+# Bind back into df
+```{r}
+# Bind back into df
+numbers_only_col <- function(x) sum(grepl("\\D", x),na.rm = T)==0
+compare1 <- as.data.frame(do.call(rbind, compare_list3)) %>%
+  mutate(across(where(is.list), ~sapply(.,paste,collapse = ","))) %>% 
+  mutate(across(everything(), ~unname(.x))) %>% 
+  mutate(across(where(numbers_only_col), ~as.numeric(.x))) %>%
+  relocate(starts_with(c("not_matched", "errors")), .after = last_col()) %>%
+  rownames_to_column("part_id") 
+  
+  
+  #mutate(#not_matched_f_num = not_matched_manu_f_num + not_matched_js_f_num,
+         #errors_f_num = (js_f_num - part_matched_js_f_num), #+ (manu_f_num - part_matched_manu_f_num),
+         #not_matched_op_num = not_matched_manu_op_num + not_matched_js_op_num,
+         #errors_op_num = (js_op_num - part_matched_js_op_num) #+ (manu_op_num - part_matched_manu_op_num) + 
+  #       ) %>%
+
+```
+
+# Compute summary stats
+```{r}
+# Compute summary stats
+summary <- compare1 %>% summarize(cl_num = sum(cl_num),
+                                  hit_f_num = sum(hit_f_num),
+                                  false_detection_f_num = sum(false_detection_f_num),
+                                  miss_f_num = sum(miss_f_num),
+                                  corr_rej_f_num = sum(corr_rej_f_num),
+                                  manu_f = sum(manu_f_num2), js_f = sum(js_f_num2),
+                                  hit_op_num = sum(hit_op_num),
+                                  false_detection_op_num = sum(false_detection_op_num),
+                                  miss_op_num = sum(miss_op_num),
+                                  corr_rej_op_num = sum(corr_rej_op_num),
+                                  manu_op = sum(manu_op_num2), js_op = sum(js_op_num2),
+                                  manu_nhs = sum(manu_nhs_num2)) %>%
+                                  dplyr::mutate(all_cat_manu = case_when((manu_f + manu_op + manu_nhs) == cl_num ~ 1,
+                                                                   TRUE ~ 0))
+
+if("js_f_cl" %in% names(compare1)){
+  summary <- summary %>% bind_cols(.,
+                                   compare1 %>%
+                                     summarize(js_f_cl = sum(js_f_cl_num),
+                                               hit_f_cl_num = sum(hit_f_cl_num),
+                                               false_detection_f_cl_num = sum(false_detection_f_cl_num),
+                                               miss_f_cl_num = sum(miss_f_cl_num),
+                                               corr_rej_f_cl_num = sum(corr_rej_f_cl_num),
+                                               js_op_cl = sum(js_op_cl_num),
+                                               hit_op_cl_num = sum(hit_op_cl_num),    
+                                               false_detection_op_cl_num = sum(false_detection_op_cl_num),
+                                               miss_op_cl_num = sum(miss_op_cl_num),
+                                               corr_rej_op_cl_num = sum(corr_rej_op_cl_num),
+                                               js_cl = sum(js_cl_num))) %>%
+                           mutate(signal_sum_f_cl = case_when(
+                                  hit_f_cl_num + miss_f_cl_num != manu_f ~ "hit_miss", TRUE ~ NA_character_)) %>%
+                           mutate(signal_sum_f_cl = case_when(
+                                  false_detection_f_cl_num + corr_rej_f_cl_num != cl_num - manu_f ~ 
+                                   paste0(signal_sum_f_cl, "falseDet_corrRej"), TRUE ~ NA_character_)) %>%
+                           mutate(signal_sum_op_cl = case_when(
+                                  hit_op_cl_num + miss_op_cl_num != manu_op ~ "hit_miss", TRUE ~ NA_character_)) %>%
+                           mutate(signal_sum_op_cl = case_when(
+                                  false_detection_op_cl_num + corr_rej_op_cl_num != cl_num - manu_op ~ 
+                                   paste0(signal_sum_op_cl, "falseDet_corrRej"), TRUE ~ NA_character_))
+}
+
+if("js_nhs_num2" %in% names(compare1)){
+  summary <- summary %>% bind_cols(.,
+                                   compare1 %>%
+                                     summarize(hit_nhs_num = sum(hit_nhs_num),
+                                               false_detection_nhs_num = sum(false_detection_nhs_num),
+                                               miss_nhs_num = sum(miss_nhs_num),
+                                               corr_rej_nhs_num = sum(corr_rej_nhs_num),
+                                               js_nhs = sum(js_nhs_num2),
+                                               hit_nhs_cl_num = sum(hit_nhs_cl_num),
+                                               false_detection_nhs_cl_num = sum(false_detection_nhs_cl_num),
+                                               miss_nhs_cl_num = sum(miss_nhs_cl_num),
+                                               corr_rej_nhs_cl_num = sum(corr_rej_nhs_cl_num),
+                                               js_nhs_cl = sum(js_nhs_cl_num)))
+ summary <- summary %>% mutate(signal_sum_nhs_cl = case_when(
+                      hit_nhs_cl_num + miss_nhs_cl_num != manu_nhs ~ "hit_miss", TRUE ~ NA_character_)) %>%
+               mutate(signal_sum_nhs_cl = case_when(
+                      false_detection_nhs_cl_num + corr_rej_nhs_cl_num != cl_num - manu_nhs ~ 
+                       paste0(signal_sum_nhs_cl, "falseDet_corrRej"), TRUE ~ NA_character_)) %>%
+                mutate(all_cat_js_cl = case_when(
+                      (js_f_cl + js_op_cl + js_nhs_cl) != js_cl ~ 1,
+                      TRUE ~ 0))
+}
+
+
+summary <- summary %>% mutate(errors_f_num = false_detection_f_num + miss_f_num,
+                               hit_rate_f = (hit_f_num + 0.5)/(hit_f_num + miss_f_num + 1),
+                               false_detect_rate_f = (false_detection_f_num+0.5)/
+                                                      (false_detection_f_num + corr_rej_f_num+1),
+                               miss_rate_f = (miss_f_num+0.5)/
+                                             (hit_f_num + miss_f_num+1),
+                               corr_rej_rate_f = (corr_rej_f_num+0.5)/
+                                                 (corr_rej_f_num + false_detection_f_num+1),
+                               errors_op_num = false_detection_op_num + miss_op_num,
+                               hit_rate_op = (hit_op_num+0.5)/
+                                             (hit_op_num + miss_op_num+1),
+                               false_detect_rate_op = (false_detection_op_num+0.5)/
+                                                      (false_detection_op_num + corr_rej_op_num+1),
+                               miss_rate_op = (miss_op_num+0.5)/
+                                             (hit_op_num + miss_op_num+1),
+                               corr_rej_rate_op = (corr_rej_op_num+0.5)/
+                                                 (corr_rej_op_num + false_detection_op_num+1)) %>%
+                        mutate(d_prime_f = qnorm(hit_rate_f) - qnorm(false_detect_rate_f),
+                               d_prime_op = qnorm(hit_rate_op) - qnorm(false_detect_rate_op))
+
+if("js_f_cl" %in% names(compare1)){
+  summary <- summary %>%  mutate(errors_f_cl_num = false_detection_f_cl_num + miss_f_cl_num,
+                                  hit_rate_f_cl = (hit_f_cl_num + 0.5)/(hit_f_cl_num + miss_f_cl_num + 1),
+                                  false_detect_rate_f_cl = (false_detection_f_cl_num+0.5)/
+                                                        (false_detection_f_cl_num + corr_rej_f_cl_num+1),
+                                  miss_rate_f_cl = (miss_f_cl_num+0.5)/
+                                                (hit_f_cl_num + miss_f_cl_num+1),
+                                  corr_rej_rate_f_cl = (corr_rej_f_cl_num+0.5)/
+                                                    (corr_rej_f_cl_num + false_detection_f_cl_num+1),
+                                  errors_op_cl_num = false_detection_op_cl_num + miss_op_cl_num,
+                                  hit_rate_op_cl = (hit_op_cl_num + 0.5)/(hit_op_cl_num + miss_op_cl_num + 1),
+                                  false_detect_rate_op_cl = (false_detection_op_cl_num+0.5)/
+                                                        (false_detection_op_cl_num + corr_rej_op_cl_num+1),
+                                  miss_rate_op_cl = (miss_op_cl_num+0.5)/
+                                                (hit_op_cl_num + miss_op_cl_num+1),
+                                  corr_rej_rate_op_cl = (corr_rej_op_cl_num+0.5)/
+                                                    (corr_rej_op_cl_num + false_detection_op_cl_num+1)) %>%
+                           mutate(d_prime_f_cl = qnorm(hit_rate_f_cl) - qnorm(false_detect_rate_f_cl),
+                                  d_prime_op_cl = qnorm(hit_rate_op_cl) - qnorm(false_detect_rate_op_cl))
+}
+
+if("js_nhs_num2" %in% names(compare1)){
+  summary <- summary %>% mutate(errors_nhs_num = false_detection_nhs_num + miss_nhs_num,
+                                hit_rate_nhs = (hit_nhs_num + 0.5)/(hit_nhs_num + miss_nhs_num + 1),
+                                false_detect_rate_nhs = (false_detection_nhs_num+0.5)/
+                                                      (false_detection_nhs_num + corr_rej_nhs_num+1),
+                                miss_rate_nhs = (miss_nhs_num+0.5)/
+                                             (hit_nhs_num + miss_nhs_num+1),
+                                corr_rej_rate_nhs = (corr_rej_nhs_num+0.5)/
+                                                 (corr_rej_nhs_cl_num + false_detection_nhs_cl_num+1),
+                                hit_rate_nhs_cl = (hit_nhs_cl_num + 0.5)/(hit_nhs_cl_num + miss_nhs_cl_num + 1),
+                                false_detect_rate_nhs_cl = (false_detection_nhs_cl_num+0.5)/
+                                                      (false_detection_nhs_cl_num + corr_rej_nhs_cl_num+1),
+                                miss_rate_nhs_cl = (miss_nhs_cl_num+0.5)/
+                                             (hit_nhs_cl_num + miss_nhs_cl_num+1),
+                                corr_rej_rate_nhs_cl = (corr_rej_nhs_cl_num+0.5)/
+                                                 (corr_rej_nhs_cl_num + false_detection_nhs_cl_num+1)) %>%
+                         mutate(d_prime_nhs = qnorm(hit_rate_nhs) - qnorm(false_detect_rate_nhs),
+                                d_prime_nhs_cl = qnorm(hit_rate_nhs_cl) - qnorm(false_detect_rate_nhs_cl))
+  
+  summary <- summary %>% relocate(d_prime_op_cl, contains("rate_op_cl"),cl_num, manu_op, js_op_cl, contains("op_cl_num"),
+                                 d_prime_op, contains("rate_op"), manu_op, js_op, contains("op_num"),
+                                 d_prime_f_cl, contains("rate_f_cl"),cl_num, manu_f, js_f_cl, contains("f_cl_num"),
+                                 d_prime_f, contains("rate_f"), manu_f, js_f, contains("f_num"),
+                                 d_prime_nhs_cl, contains("rate_nhs_cl"),cl_num, manu_nhs, js_nhs_cl, contains("nhs_cl_num"),
+                                 d_prime_nhs, contains("rate_nhs"), manu_nhs, js_nhs, contains("nhs_num")
+                                 )
+} else if ("js_f_cl" %in% names(compare1)){
+  summary <- summary %>% relocate(d_prime_op_cl, contains("rate_op_cl"),cl_num, manu_op, js_op_cl, contains("op_cl_num"),
+                                 d_prime_op, contains("rate_op"), manu_op, js_op, contains("op_num"),
+                                 d_prime_f_cl, contains("rate_f_cl"),cl_num, manu_f, js_f_cl, contains("f_cl_num"),
+                                 d_prime_f, contains("rate_f"), manu_f, js_f, contains("f_num")
+                                 )
+} else {
+   summary <- summary %>% relocate(d_prime_op, contains("rate_op"), manu_op, js_op, contains("op_num"),
+                                 d_prime_f, contains("rate_f"), manu_f, js_f, contains("f_num")
+                                 )
+}
+
+```
+
+## Counting matches to particular regexes
+```{r}
+## Counting matches to particular regexes
+regex_count <- compare1 %>% select(contains("labels")) %>%
+                    mutate(
+                           # f_regex1 = str_count(manu_f_labels, "x1"),
+                           # f_regex2 = str_count(manu_f_labels, "x2"),
+                           # f_regex3 = str_count(manu_f_labels, "x3"),
+                           # f_regex4 = str_count(manu_f_labels, "x4"),
+                           # f_regex5 = str_count(manu_f_labels, "x5"),
+                           # f_regex6 = str_count(manu_f_labels, "x6"),
+                           # f_regex7 = str_count(manu_f_labels, "x7"),
+                           # f_regex8 = str_count(manu_f_labels, "x8"),
+                           # f_regex9 = str_count(manu_f_labels, "x9"),
+                           fp1 = str_count(js_f_labels, "fp1"),
+                           fp2 = str_count(js_f_labels, "fp2"),
+                           fp3 = str_count(js_f_labels, "fp3"),
+                           fp4 = str_count(js_f_labels, "fp4"),
+                           fp5 = str_count(js_f_labels, "fp5"),
+                           fp6 = str_count(js_f_labels, "fp6"),
+                           fp7 = str_count(js_f_labels, "fp7"),
+                           fp8 = str_count(js_f_labels, "fp8"),
+                           fp9 = str_count(js_f_labels, "fp9"),
+                           # op_regex1 = str_count(manu_op_labels, "x1"),
+                           # op_regex2 = str_count(manu_op_labels, "x2"),
+                           # op_regex3 = str_count(manu_op_labels, "x3"),
+                           op1 = str_count(js_op_labels, "op1"),
+                           op2 = str_count(js_op_labels, "op2"),
+                           op3 = str_count(js_op_labels, "op3"),
+                           op4 = str_count(js_op_labels, "op4"),
+                           op5 = str_count(js_op_labels, "op5"),
+                           fp1_npm = str_count(false_detection_labels_f, "fp1"),
+                           fp2_npm = str_count(false_detection_labels_f, "fp2"),
+                           fp3_npm = str_count(false_detection_labels_f, "fp3"),
+                           fp4_npm = str_count(false_detection_labels_f, "fp4"),
+                           fp5_npm = str_count(false_detection_labels_f, "fp5"),
+                           fp6_npm = str_count(false_detection_labels_f, "fp6"),
+                           fp7_npm = str_count(false_detection_labels_f, "fp7"),
+                           fp8_npm = str_count(false_detection_labels_f, "fp8"),
+                           fp9_npm = str_count(false_detection_labels_f, "fp9"),
+                           op1_npm = str_count(false_detection_labels_op, "op1"),
+                           op2_npm = str_count(false_detection_labels_op, "op2"),
+                           op3_npm = str_count(false_detection_labels_op, "op3"),
+                           op4_npm = str_count(false_detection_labels_op, "op4"),
+                           op5_npm = str_count(false_detection_labels_op, "op5")) %>%
+                       summarize(
+                                # f_regex1 = sum(f_regex1), f_regex2 = sum(f_regex2), f_regex3 = sum(f_regex3),
+                                # f_regex4 = sum(f_regex4), f_regex5 = sum(f_regex4), f_regex6 = sum(f_regex6),
+                                # f_regex7 = sum(f_regex7), f_regex8 = sum(f_regex8), f_regex9 = sum(f_regex9),
+                                fp1 = sum(fp1), fp2 = sum(fp2), fp3 = sum(fp3),
+                                fp4 = sum(fp4), fp5 = sum(fp5), fp6 = sum(fp6),
+                                fp7 = sum(fp7), fp8 = sum(fp8), fp9 = sum(fp9),
+                                # op_regex1 = sum(op_regex1), op_regex2 = sum(op_regex2), op_regex3 = sum(op_regex3),
+                                op1 = sum(op1), op2 = sum(op2), op3 = sum(op3),
+                                op4 = sum(op4),  op5 = sum(op5),
+                                #
+                                fp1_npm = sum(fp1_npm), fp2_npm = sum(fp2_npm), fp3_npm = sum(fp3_npm),
+                                fp4_npm = sum(fp4_npm), fp5_npm = sum(fp5_npm), fp6_npm = sum(fp6_npm),
+                                fp7_npm = sum(fp7_npm), fp8_npm = sum(fp8_npm), fp9_npm = sum(fp9_npm),
+                                #
+                                op1_npm = sum(op1_npm), op2_npm = sum(op2_npm), op3_npm = sum(op3_npm),
+                                op4_npm = sum(op4_npm), op5_npm = sum(op5_npm)
+                      )
+
+if("js_nhs_cl" %in% names(summary)){
+  regex_count <- regex_count %>%
+    bind_cols(compare1 %>%
+              select(contains("labels")) %>%
+              mutate(nhs1 = str_count(js_nhs_labels, "nhs1"),
+                     nhs2 = str_count(js_nhs_labels, "nhs2"),
+                     nhs3 = str_count(js_nhs_labels, "nhs3"),
+                     nhs4 = str_count(js_nhs_labels, "nhs4"),
+                     nhs1_npm = str_count(false_detection_labels_nhs, "nhs1"),
+                     nhs2_npm = str_count(false_detection_labels_nhs, "nhs2"),
+                     nhs3_npm = str_count(false_detection_labels_nhs, "nhs3"),
+                     nhs4_npm = str_count(false_detection_labels_nhs, "nhs4")) %>%
+              summarize(nhs1 = sum(nhs1), nhs2 = sum(nhs2), nhs3 = sum(nhs3),
+                        nhs4 = sum(nhs4),
+                        nhs1_npm = sum(nhs1_npm), nhs2_npm = sum(nhs2_npm), nhs3_npm = sum(nhs3_npm),
+                        nhs4_npm = sum(nhs4_npm)))
+}
+
+# Ruby to JS comparison
+# mutate(
+#        fp1_diff = fp1 - f_regex1, fp2_diff = fp2 - f_regex2, fp3_diff = fp3 - f_regex3,
+#        fp4_diff = fp4 - f_regex4, fp5_diff = fp5 - f_regex5, fp6_diff = fp6 - f_regex6,
+#        fp7_diff = fp7 - f_regex7, fp8_diff = fp8 - f_regex8, fp9_diff = fp9 - f_regex9,
+#        op1_diff = op1 - op_regex1, op2_diff = op2 - op_regex2, op3_diff = op3 - op_regex3) %>%
+# relocate(ends_with("diff"))
+#) %>% t()
+```
+
+# Final df
+```{r}
+# Final df
+summary <- bind_cols(summary, regex_count)
+if("js_nhs_cl" %in% names(summary)){
+  summary <- summary %>% relocate(contains("nhs"), .after = last_col())
+}
+summary <- t(summary)
+summary <- as.data.frame(summary) %>%
+            rename("value" = "V1") %>%
+            rownames_to_column("stat") %>%
+            mutate(dup_check = ifelse(duplicated(value) | duplicated(value, fromLast = TRUE), 1, 0))
+
+compare <- full_join(summary %>% rownames_to_column("join"),
+                     compare1 %>% rownames_to_column("join"), by = "join") %>%
+            select(-join) %>% relocate(stat,value) %>% mutate(value = round(as.numeric(value), 4)) %>%
+            relocate(false_detection_labels_f, .after = js_f_labels) %>%
+            relocate(false_detection_labels_op, .after = js_op_labels)
+```
+
+## Export results 
+## Append summary to comparison table
+```{r}
+## Export
+#fact_nomatch <- compare %>% filter(not_matched_manu_f_num > 0 | not_matched_js_f_num > 0)
+# write_csv(df, "joined_js_manu_eval_4_28.csv")
+# write.csv(fact_compare, "processed_js_ruby_eval_4_28.csv")
+# write.csv(fact_nomatch, "processed_js_ruby_nomatch_4_28.csv")
+
+# For Ruby
+if(ruby_to_manu == TRUE) {
+  write.csv(compare, output_path)
+}
+
+# For JS
+if(ruby_to_manu == FALSE) {
+  write.csv(compare, output_path)
+}
+```
+
+```{r}
+# Check if file exists
+if (!file.exists(comp_table_path)) {
+  write_csv(summary %>%
+              rename_with(~paste0(str_split_i(output_filename, "/", 2)), starts_with("val")),
+            file = comp_table_path)
+} else {
+  comp_table <- read.csv(comp_table_path)
+  comp_table <- full_join(x = comp_table %>% select(stat, contains("manu")),
+                          y = summary %>% dplyr::select(stat, value) %>%
+                            mutate(row = row_number()) %>%
+                            rename_with(~paste0(str_split_i(output_filename, "/", 2)), starts_with("val")),
+                          by = "stat", keep = FALSE) %>% 
+  arrange(row) %>%
+  select(-row)
+  write_csv(comp_table, file = comp_table_path)
+}
+
+
+```
