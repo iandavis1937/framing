@@ -1,0 +1,115 @@
+Trump is speaking what is on his mind without decorating or "filtering"his words or promises which makes me feel comfortable voting for him and gives me the impression that he is honest.
+(S (NP (NNP Trump)) (VP (VBZ is) (VP (VBG speaking) (SBAR (WHNP (WP what)) (S (VP (VBZ is) (PP (IN on) (NP (PRP$ his) (NN mind)))))) (PP (PP (IN without) (S (VP (VBG decorating) (CC or) (`` ") (PRP$ filtering"his) (NNS words) (CC or) (NNS promises)))) (SBAR (WHNP (WDT which)) (S (VP (VP (VBZ makes) (S (NP (PRP me)) (VP (VB feel) (ADJP (JJ comfortable)) (S (VP (VBG voting) (PP (IN for) (NP (PRP him)))))))) (CC and) (VP (VBZ gives) (NP (PRP me)) (NP (DT the) (NN impression) (SBAR (IN that) (S (NP (PRP he)) (VP (VBZ is) (ADJP (JJ honest))))))))))))) (. .))(
+  (S
+    (NP (NNP Trump))
+    (VP
+      (VBZ is)
+      (VP
+        (VBG speaking)
+        (SBAR
+          (WHNP (WP what))
+          (S (VP (VBZ is) (PP (IN on) (NP (PRP$ his) (NN mind)))))
+)
+
+        (PP
+          (PP
+            (IN without)
+            (S
+              (VP
+                (VBG decorating)
+                (CC or)
+                (`` ")
+                (PRP$ filtering"his)
+                (NNS words)
+                (CC or)
+                (NNS promises)))
+)
+          (SBAR
+            (WHNP (WDT which))
+            (S
+              (VP
+                (VP
+                  (VBZ makes)
+                  (S
+                    (NP (PRP me))
+                    (VP
+                      (VB feel)
+                      (ADJP (JJ comfortable))
+                      (S
+                        (VP
+                          (VBG voting)
+                          (PP (IN for) (NP (PRP him)))))
+))
+)
+                (CC and)
+                (VP
+                  (VBZ gives)
+                  (NP (PRP me))
+                  (NP
+                    (DT the)
+                    (NN impression)
+                    (SBAR
+                      (IN that)
+                      (S
+                        (NP (PRP he))
+                        (VP (VBZ is) (ADJP (JJ honest))))
+)
+))))
+)
+)))
+    (. .))
+)
+
+Hillary chooses her each and every word when she talks which not makes me feel that she means exactly slash and or feels what she is saying!
+(S (NP (NNP Hillary)) (VP (VBZ chooses) (NP (PRP her)) (NP (QP (DT each) (CC and) (DT every)) (NN word)) (SBAR (SBAR (WHADVP (WRB when)) (S (NP (PRP she)) (VP (VBZ talks)))) (SBAR (WHNP (WDT which)) (S (RB not) (VP (VBZ makes) (S (NP (PRP me)) (VP (VB feel) (SBAR (IN that) (S (NP (PRP she)) (VP (VP (VBZ means) (ADVP (RB exactly)) (VP (VB slash))) (CC and) (CC or) (VP (VBZ feels) (SBAR (WHNP (WP what)) (S (NP (PRP she)) (VP (VBZ is) (VP (VBG saying)))))))))))))))) (. !))(
+  (S
+    (NP (NNP Hillary))
+    (VP
+      (VBZ chooses)
+      (NP (PRP her))
+      (NP (QP (DT each) (CC and) (DT every)) (NN word))
+      (SBAR
+        (SBAR
+          (WHADVP (WRB when))
+          (S (NP (PRP she)) (VP (VBZ talks)))
+)
+
+        (SBAR
+          (WHNP (WDT which))
+          (S
+            (RB not)
+            (VP
+              (VBZ makes)
+              (S
+                (NP (PRP me))
+                (VP
+                  (VB feel)
+                  (SBAR
+                    (IN that)
+                    (S
+                      (NP (PRP she))
+                      (VP
+                        (VP
+                          (VBZ means)
+                          (ADVP (RB exactly))
+                          (VP (VB slash)))
+                        (CC and)
+                        (CC or)
+                        (VP
+                          (VBZ feels)
+                          (SBAR
+                            (WHNP (WP what))
+                            (S
+                              (NP (PRP she))
+                              (VP (VBZ is) (VP (VBG saying))))
+)
+)))
+)
+))
+))
+)
+)
+)
+    (. !))
+)
+
