@@ -12,6 +12,16 @@ const { type } = require('os');
 const zeromq = require('zeromq');
 const path = require('path');
 
+// Record the date
+const today = new Date();
+const month = String(today.getMonth() + 1).padStart(2, '0'); // JavaScript months are 0-based.
+const day = String(today.getDate()).padStart(2, '0');
+const hour = String(today.getHours()).padStart(2, '0');
+const minute = String(today.getMinutes()).padStart(2, '0');
+
+const time_str = `${month}_${day}_${hour}_${minute}`;
+console.log("Time: ", time_str);
+
 // Create a Winston logger
 const logger = winston.createLogger({
 	level: 'info',
@@ -29,13 +39,41 @@ logger.add(new winston.transports.Console({
 }));
 // }
 
-function parseCSV(data, delimiter) {
+function parseCSV(data, delimiter, input_colname) {
     let parsedData = Papa.parse(data, { delimiter: delimiter, header: true }).data;
-	return parsedData.filter(row => row['open_response'] !== 'NA');
+	return parsedData.filter(row => row[input_colname] !== 'NA');
 }
 
 
 const reqSocket = zeromq.socket('req');
+
+// Connect your socket to the server endpoint
+reqSocket.connect('ipc:///tmp/zeromq.sock');
+
+
+// Function to send an initialization message
+function sendInitializationMessage() {
+    return new Promise((resolve, reject) => {
+        // Send a predefined init message
+        console.log("Sending HELLO...")
+        reqSocket.send(JSON.stringify({ greeting: 'HELLO' }));
+
+        reqSocket.once("message", function(reply) {
+            const response = JSON.parse(reply.toString());
+            if (response.greeting === 'HELLO_ACK') {
+                console.log("Initialization successful.");
+                resolve();
+            } else {
+                reject(new Error("Failed initialization handshake."));
+            }
+        });
+
+        reqSocket.once("error", function(error) {
+            reject(error);
+        });
+    });
+}
+
 
 // Function to send a request, return a promise that is resolved when the reply is received
 function sendZmqRequest(outboundMessage) {
@@ -115,7 +153,7 @@ function sendZmqRequest(outboundMessage) {
                     {op_label: "op1", op_regex: new RegExp(`(?:\\bi\\b(?: )?(?:\\b\\w+\\b)?(?: )?(?:do|dont|don't|do not|can|can not|cant|can't|cannot|also|really|very much)?(?: )?(?:\\b\\w+\\b)? \\b(?:agree|agreed|am agreeing|believe|beleive|beleieve|believed|am believing|consider|considered|am considering|disagree|disagreed|am disagreeing|hope|hoped|am hoping|feel|felt|am feeling|think|thought|am thinking|see|saw|am seeing|question|questioned|am questioning|suppose|am supposing|am\\b \\bunsure|share(?: )?(?:\\b\\w+\\b)?(?: )?(?:\\b\\w+\\b)? (?:views|beliefs|opinions|perspectives|standpoints)|have(?: )?(?:\\b\\w+\\b)?(?: )?(?:\\b\\w+\\b)? (?:views|beliefs|opinions|perspectives|standpoints)|(?:cannot|can't) say for sure)\\b(?:.{0,20}))`, 'gmi')},
                     {op_label: "op2", op_regex: new RegExp(`(?:(?:\\bi'm\\b|\\bi\\b \\bam\\b)(?: )?(?:really|very much|not|not really|not very much)? [a-z]+ to \\b(?:agree|believe|beleive|beleieve|consider|disagree|hope|feel|felt|think|thought|see|saw|question|suppose|share(?: )?(?:\\b\\w+\\b)?(?: )?(?:\\b\\w+\\b)? (?:views|beliefs|opinions|perspectives|standpoints))\\b(?:.{0,20}))`, 'gmi')},
                     {op_label: "op3", op_regex: new RegExp(`(?:\\b(?:in\\b my opinion|from my perspective|\\bin\\b my view|from my view|from my standpoint|from my viewpoint|from where I stand|\\bfor\\b \\bme|\\bto\\b \\bme|my views|my understanding|(?:view(?:s)?|opinion(?:s)?|standpoint(?:s)?|viewpoint(?:s)?|belief(?:s)?|perspective(?:s)?)\\b \\bmirror(?:s)?\\b \\bmine|(?:view(?:s)?|opinion(?:s)?|standpoint(?:s)?|viewpoint(?:s)?|belief(?:s)?|perspective(?:s)?) (?:are|is) the same as mine)\\b(?:.{0,20}))`, 'gmi')},
-                    {op_label: "op4", op_regex: new RegExp(`(?:(?:\\bi'm\\b|\\bi\\b \\bam\\b)(?: )?(?:really|very much|not|not really|not very much)? a(?: firm| strong)? (?:believer)(?:.{0,20}))`, 'gmi')},
+                    {op_label: "op4", op_regex: new RegExp(`(?:(?:\\bi'm\\b|\\bi\\b \\bam\\b)(?: )?(?:really|very much|not|not really|not very much)? (?:a|an)(?: firm| strong)? (?:believer)(?:.{0,20}))`, 'gmi')},
                     {op_label: "op5", op_regex: new RegExp(`(?:(?:\\bi'm\\b|\\bi\\b \\bam\\b)(?: )?(?:not|(?:not )?very much|(?:not )?really|(?:not )?especially|(?:not )?particularly)?(?: )?(?:\\b\\w+\\b)? \\bnot\\b (?:positive|sure|certain)\\b(?:.{0,20}))`, 'gmi')},
                     {op_label: "op6", op_regex: new RegExp(`(?:(?:(?<!\\bhe|\\bshe|\\bthey|candidate(?:s)?|clinton|donald|gop|hillary|hilary|trump|trum)\\b make(?:s)?\\b me \\bfeel|\\bmake(?:s)?\\b me \\b(?:agree|believe|beleive|beleieve|consider|disagree|hope|feel|think|suppose|see|question))\\b(?:.{0,20}))`, 'gmi')}
                 ];
@@ -140,20 +178,6 @@ function sendZmqRequest(outboundMessage) {
                     {f_label: "fp9", f_regex: new RegExp(`(?:(?:\\bShe\'s\\b|\\bHe\'s\\b|\\bThey\'re\\b)(?:.{0,20}))`, 'gmi')}
                 ];
                 
-                
-                /*
-                const FACT_FRAME_REGEXES = [
-                    {f_label: "fp1", f_regex: new RegExp(`(?:\\s\\b\\w+\\b\\s)?\\b(?:are|can't|cannot|demonstrate|demonstrates|did|had|is|needs|should|will|would|were|was|has)\\b(?:\\s\\b\\w+\\b\\s)?(?:\\s\\b\\w+\\b)?`, 'gm')},
-                    {f_label: "fp2", f_regex: new RegExp(`ABCDEFGHIJK`, 'gm')}, /// deprecate?
-                    {f_label: "fp3", f_regex: new RegExp(`ABCDEFGHIJK`, 'gm')}, /// deprecate?
-                    {f_label: "fp4", f_regex: new RegExp(`ABCDEFGHIJK`, 'gm')}, /// deprecate?
-                    {f_label: "fp5", f_regex: new RegExp(`ABCDEFGHIJK`, 'gm')}, /// deprecate?
-                    {f_label: "fp6", f_regex: new RegExp(`ABCDEFGHIJK`, 'gm')}, /// deprecate?
-                    {f_label: "fp7", f_regex: new RegExp(`(?:(?:^|[^.]* )(?:[Hh][Ee]|[Ss][Hh][Ee]|[Ii][Tt]|[Tt][Hh][Ee][Yy]|[Cc][Aa]ndidate|[Cc][Ll]inton|[Dd][Oo]nald|gop|GOP|GOp|[Hh][Ii]llary|[Hh][Ii]lary|[Tt][Rr]ump|[Tt][Rr]um) [a-z]+(?:ed|[^ia]s) )`, 'gm')},
-                    {f_label: "fp8", f_regex: new RegExp(`(?:(?:^|[^.]* )(?:[Hh][Ee]|[Ss][Hh][Ee]|[Ii][Tt]|[Tt][Hh][Ee][Yy]|[Cc][Aa]ndidate|[Cc][Ll]inton|[Dd][Oo]nald|gop|GOP|GOp|[Hh][Ii]llary|[Hh][Ii]lary|[Tt][Rr]ump|[Tt][Rr]um) [a-z]+ [a-z]+(?:ed|[^ia]s) )`, 'gm')},
-                    {f_label: "fp9", f_regex: new RegExp(`(?:(?:She\'s|He\'s))`, 'g')}
-                ];
-                */
                 
                 // Check for opinion frames: loop through opinion frame regexes
                 let opinion_frames = [];
@@ -196,23 +220,6 @@ function sendZmqRequest(outboundMessage) {
                     FACT_FRAME_REGEXES.forEach(({ f_label, f_regex }) => {
                     let fact_match = response.match(f_regex);
                         if (fact_match) {
-
-                            // if (f_label == "fp1" || f_label == "fp2" || f_label == "fp3"){ // start:
-                            // //  fp1-3 PRONOUNS/PRESIDENTS filter block
-                            // // console.log(fact_match)
-                            //     let fact_match2 = fact_match.filter((match) => {
-                            //         // note, trying to log the outcomes of the following filter tests here by 
-                            //         // storing them in a variable will alter the behavior of the filter
-                            //         // due to indexing 
-                            //             return (
-                            //             !PRONOUNS_REGEX.test(match) && !PRESIDENT_NAMES_REGEX.test(match)
-                            //             );
-                            //     }); // end: PRONOUNS/PRESIDENTS filter block, next push to array
-                            // fact_match2.forEach((match) => {
-                            //     fact_frames.push({ match: match, label: f_label });
-                            // });
-                            // } else { // start: for fp4-9, push to output array (no PRONOUNS/PRESIDENTS filter)
-
                             fact_match.forEach((match) => {
                                 fact_frames.push({ match: match, label: f_label });
                             });
@@ -425,6 +432,9 @@ app.post('/string', async (req, res) => {
     };
 
     try {
+        // First send initialization message
+        await sendInitializationMessage();
+
         // Sends the outbound message over the ZeroMQ socket using the sendZmqRequest function,
         // and waits for the Promise it returns to be resolved with the processed string
         let finalResult = await sendZmqRequest(outboundMessage);
@@ -443,6 +453,13 @@ app.post('/string', async (req, res) => {
 
 
 app.post('/csv', upload.single('csvFile'), async (req, res) => {  
+    // Access the column names for the input text and case id sent with the form
+    let id = req.body.id;
+    console.log("ID column: ", id);
+
+    let input_colname = req.body.colname;
+    console.log("Column to analyze: ", input_colname);
+
     // This will store the uploaded file in a csvFile field in the request
     let csvFile = req.file;
     console.log("File uploaded: ", csvFile.path)
@@ -453,15 +470,22 @@ app.post('/csv', upload.single('csvFile'), async (req, res) => {
 
     // Parse the CSV file
     let fileData = await fs.readFile(csvFile.path, 'utf8');
-    let loadedCSV = parseCSV(fileData, ",");
-    console.log("loadedCSV: ", loadedCSV)
+    let loadedCSV = parseCSV(fileData, ",", input_colname);
+    console.log("loadedCSV first row: ", loadedCSV[0])
+    console.log("loadedCSV last row: ", loadedCSV[loadedCSV.length - 1])
     let finalResult
     let output_arr = []
+
+    // Sends IPC initialization message
+    console.log("Initializing IPC...")
+    await sendInitializationMessage();
         
     // Process each row in the uploaded csv
     for (let row of loadedCSV) {
-        let part_id = row.part_id;
-        let participant_input = row.open_response;
+        console.log("row: ", row)
+        let part_id = row[id];
+        let participant_input = row[input_colname];
+        console.log("row: ", participant_input)
 
 
         // Creates an outbound message object containing a command and the participant_input
@@ -470,6 +494,7 @@ app.post('/csv', upload.single('csvFile'), async (req, res) => {
         };
 
         try {
+            
             // Sends the outbound message over the ZeroMQ socket using the sendZmqRequest function,
             // and waits for the Promise it returns to be resolved with the processed string
             let finalResult = await sendZmqRequest(outboundMessage);
@@ -496,7 +521,7 @@ app.post('/csv', upload.single('csvFile'), async (req, res) => {
     // console.log("finalFile: ", finalFile); // logs CSV string
 
     // To write this to a file:
-    outputFilePath = 'output8_2.2_b2.csv';
+    const outputFilePath = `./../output/output_${time_str}.csv`;
     fs.writeFile(outputFilePath, finalFile, function(err) {
         if (err) {
             console.log('Error saving the file:', err);

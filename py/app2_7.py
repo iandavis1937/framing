@@ -405,10 +405,21 @@ context = zmq.Context()
 socket = context.socket(zmq.REP)
 socket.bind("ipc:///tmp/zeromq.sock")
 
+try:
+    # Wait for initial handshake message
+    init_message = socket.recv_string()
+    init_message = json.loads(init_message)
+    if init_message["greeting"] == "HELLO":
+        print("Initial handshake message received.")
+        reply = json.dumps({"greeting": "HELLO_ACK"})
+        socket.send_string(reply)
+except Exception as e:
+    print(f"Error processing initial message: {e}")
+
 while True:
     participant_input = socket.recv_string()
-    print("IPC reached...")
     print(f"Received data: {participant_input}")
+    print("IPC reached...")
     participant_input = json.loads(participant_input)
     # Extract the value of "input"
     participant_input = participant_input["input"]
