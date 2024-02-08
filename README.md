@@ -42,7 +42,7 @@ curl -X POST -F "csvFile=@C:/.../study2.csv" http://localhost:8080/csv
 
 🐧 [Local Linux Instructions](https://github.com/iandavis1937/framing/tree/main/readme_files/install_local_ubuntu.md)
 
-    [Ubuntu AWS EC2 Instructions](https://github.com/iandavis1937/framing/tree/main/readme_files/install_ec2_ubuntu.md)
+   [Ubuntu AWS EC2 Instructions](https://github.com/iandavis1937/framing/tree/main/readme_files/install_ec2_ubuntu.md)
 
 ## Set Up an AWS EC2 Instance
 [Ubuntu AWS EC2 Set-Up Instructions](https://github.com/iandavis1937/framing/tree/main/readme_files/aws.md)
