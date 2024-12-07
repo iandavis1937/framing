@@ -124,7 +124,7 @@ class ClauseSegmentation:
         
     def print_all_constituents(self, constituent):
         # Print the current constituent
-        print(f"Constituent: '{constituent}', labels: {constituent._.labels}")
+        # print(f"Constituent: '{constituent}', labels: {constituent._.labels}")
         # Recursively print all constituents of the current constituent
         for child in constituent._.children:
             self.print_all_constituents(child)
@@ -134,7 +134,7 @@ class ClauseSegmentation:
         """Uses recursion to check if the constituent has any children, grandchildren, etc. w/ 'X' label"""
         if label in constituent._.labels:
             parent = constituent._.parent
-            print(parent)
+            # print(parent)
             return(parent)
             #return (parent.start, parent.end)
         for child in constituent._.children:
@@ -146,20 +146,20 @@ class ClauseSegmentation:
 
     def find_constituent_w_label(self, constituent, label):
         """Uses recursion to check if the constituent has any children, grandchildren, etc. w/ 'X' label"""
-        print(f"{constituent}, const. labs: {constituent._.labels}, {type(constituent._.labels)}")
+        # print(f"{constituent}, const. labs: {constituent._.labels}, {type(constituent._.labels)}")
         try:
             leaf_label = constituent._.labels[0]
-            print("leaf lab ", leaf_label)
+            # print("leaf lab ", leaf_label)
         except IndexError:
             leaf_label = None
         if leaf_label == label and len(constituent._.labels) == 1:
-            print("Base: ", constituent)
+            # print("Base: ", constituent)
             return(constituent)
             #return (parent.start, parent.end)
         for child in constituent._.children:
             result = self.find_constituent_w_label(child, label)
             if result is not None:  # if a tuple was found
-                print("Return Result: ", result)
+                # print("Return Result: ", result)
                 return result
         return None  # return None if no tuple was found
 
@@ -213,109 +213,109 @@ class ClauseSegmentation:
         split_indices = []
         for sentence in doc.sents:
             sent_split_indices = []
-            print("Parse tree:")
-            pprint(sentence._.parse_string, indent = 4)
-            #self.print_all_constituents(sentence)
+            # print("Parse tree:")
+            # pprint(sentence._.parse_string, indent = 4)
+            # self.print_all_constituents(sentence)
             parse_tree = ParentedTree.fromstring('(' + sentence._.parse_string + ')')
             S_tree = self.write_S_tree(parse_tree)
-            print(parse_tree.pretty_print())
-            print(S_tree, type(S_tree))
+            # print(parse_tree.pretty_print())
+            # print(S_tree, type(S_tree))
             with open('clause_test.txt', 'a') as file:
                 file.write(str(sentence)+"\n")
                 file.write(sentence._.parse_string)
                 file.write(S_tree)
                 file.write("\n\n")
                 
-            print("Inventory Split Indices: ", sent_split_indices)
-            print("Full Sentence: ", sentence)
+            # print("Inventory Split Indices: ", sent_split_indices)
+            # print("Full Sentence: ", sentence)
             can_split = False
             for constituent in sentence._.constituents:
-                print(f"Outside: '{constituent}', labels = {constituent._.labels}, parent = {constituent._.parent}")
+                # print(f"Outside: '{constituent}', labels = {constituent._.labels}, parent = {constituent._.parent}")
                 try:
                     leaf_label = str(constituent._.labels[0])
-                    print("leaf lab ", leaf_label)
+                    # print("leaf lab ", leaf_label)
                 except IndexError:
                     leaf_label = None
                 
                 # Check if sentence can be split by "S" clauses that are children of the original sentence
                 #if "S" in constituent._.labels or "SINV" in constituent._.labels and constituent._.parent == sentence:
                 if leaf_label in ("S", "SINV") and constituent._.parent == sentence:
-                    print(f"Inside S Split Block: '{constituent}', labels = {constituent._.labels}, parent = {constituent._.parent}")
+                    # print(f"Inside S Split Block: '{constituent}', labels = {constituent._.labels}, parent = {constituent._.parent}")
                     
                     # Check if "S" clause can be split by "WHNP" clauses that are children of the "S" clause
                     WHNP_result = self.find_children_w_label(constituent, "WHNP")
-                    print(f"WHNP Result: {WHNP_result}")
+                    # print(f"WHNP Result: {WHNP_result}")
                     if isinstance(WHNP_result, spacy.tokens.span.Span):
-                        print("leaf A: non WHNP + WHNP from S")
-                        print(f"Inside WHNP Split Block: '{WHNP_result}', labels = {WHNP_result._.labels}")
+                        # print("leaf A: non WHNP + WHNP from S")
+                        # print(f"Inside WHNP Split Block: '{WHNP_result}', labels = {WHNP_result._.labels}")
                         non_WHNP_indices = (constituent.start, WHNP_result.start)
                         WHNP_result_indices = (WHNP_result.start, WHNP_result.end)
                         sent_split_indices.append(non_WHNP_indices)
                         sent_split_indices.append(WHNP_result_indices)
-                        print(sent_split_indices)
+                        # print(sent_split_indices)
                         can_split = True
                     elif (constituent.start, constituent.end) not in sent_split_indices:
-                        print("leaf B: S")
-                        print(f"No WHNP Split: '{constituent}', labels = {constituent._.labels}")
+                        # print("leaf B: S")
+                        # print(f"No WHNP Split: '{constituent}', labels = {constituent._.labels}")
                         sent_split_indices.append((constituent.start, constituent.end))
-                        print(sent_split_indices)
+                        # print(sent_split_indices)
                         can_split = True
                         
                 # If no "S" clause split, check if sentence can be split by "WHNP" clauses that are children of the original sentence
                 elif constituent._.parent == sentence:
                     WHNP_result = self.find_children_w_label(constituent, "WHNP")
-                    print(f"WHNP Result: {WHNP_result}")
+                    # print(f"WHNP Result: {WHNP_result}")
                     if isinstance(WHNP_result, spacy.tokens.span.Span):
-                        print(f"Inside WHNP Split Block: '{WHNP_result}', labels = {WHNP_result._.labels}")
+                        # print(f"Inside WHNP Split Block: '{WHNP_result}', labels = {WHNP_result._.labels}")
                         WHNP_result_indices = (WHNP_result.start, WHNP_result.end)
                         
                         # Check if "WHNP" clause can be split by "S" clauses that are children of the "WHNP" clause
                         lower_S_result = self.find_constituent_w_label(WHNP_result, "S")
-                        print(f"S_result: {lower_S_result}")
+                        # print(f"S_result: {lower_S_result}")
                         if isinstance(lower_S_result, spacy.tokens.span.Span):
-                            print("leaf C1: non WHNP + WHNP + lower S from clause w/ WHNP element")
-                            print(f"Inside Lower S Split Block: '{lower_S_result}', labels = {lower_S_result._.labels}")
+                            # print("leaf C1: non WHNP + WHNP + lower S from clause w/ WHNP element")
+                            # print(f"Inside Lower S Split Block: '{lower_S_result}', labels = {lower_S_result._.labels}")
                             non_sub_indices = (sentence.start, WHNP_result_indices[0])
                             lower_S_indices = (lower_S_result.start, lower_S_result.end)
                             sent_split_indices.append(non_sub_indices)
                             sent_split_indices.append(WHNP_result_indices)
                             sent_split_indices.append(lower_S_indices)
-                            print(sent_split_indices)
+                            # print(sent_split_indices)
                             can_split = True
                             
                         else:
-                            print("leaf C2: non WHNP + WHNP from clause w/ WHNP element")
-                            print(f"No Lower S Split: '{WHNP_result}', labels = {WHNP_result._.labels}")
+                            # print("leaf C2: non WHNP + WHNP from clause w/ WHNP element")
+                            # print(f"No Lower S Split: '{WHNP_result}', labels = {WHNP_result._.labels}")
                             non_WHNP_indices = (sentence.start, WHNP_result.start)
                             sent_split_indices.append(non_WHNP_indices)
                             sent_split_indices.append(WHNP_result_indices)
-                            print(sent_split_indices)
+                            # print(sent_split_indices)
                             can_split = True
                             
                         
             # If no "S" clause split or "WHNP" split, append the whole sentence as one clause
             if can_split == False and (sentence.start, sentence.end) not in sent_split_indices:
-                print("leaf D: whole sentence")
-                print(f"No Split: '{sentence}', labels = {sentence._.labels}")
+                # print("leaf D: whole sentence")
+                # print(f"No Split: '{sentence}', labels = {sentence._.labels}")
                 sent_split_indices.append((sentence.start, sentence.end))
-                print(sent_split_indices)
+                # print(sent_split_indices)
             
             
             # Check that the whole sentence is accounted for
             min_tuple = list(sent_split_indices[0]) # Convert the first tuple to a list
             max_tuple = list(sent_split_indices[-1]) # Convert the last tuple to a list
-            print("Max tuple: ", max_tuple)
+            # print("Max tuple: ", max_tuple)
             
-            print("start ", sentence.start)
+            # print("start ", sentence.start)
             if min(min_tuple) != sentence.start:
                 min_tuple[0] = sentence.start  # Change the first element in the list
                 sent_split_indices[0] = tuple(min_tuple)
                 
-            print("end ", sentence.end)
+            # print("end ", sentence.end)
             if max(max_tuple) != sentence.end:
                 max_tuple[-1] = sentence.end  # Change the first element in the list
                 sent_split_indices[-1] = tuple(max_tuple)
-                print(sent_split_indices)
+                # print(sent_split_indices)
             
             sent_split_indices = self.fill_gaps(sent_split_indices)
             sent_split_indices = self.remove_overlaps(sent_split_indices)
