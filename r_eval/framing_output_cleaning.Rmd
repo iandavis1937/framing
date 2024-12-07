@@ -1,0 +1,117 @@
+---
+title: "Subjective Qualifier Algorithm Output Cleaning"
+output: html_document
+date: last-modified
+---
+
+# R setup
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+here <- dirname(rstudioapi::getActiveDocumentContext()$path)
+setwd(here)
+getwd()
+list.files("../Manual Coding/")
+```
+
+```{r library, include=FALSE}
+library(pacman)
+p_load(gtools, broom, stringr, tidyverse, dplyr)
+```
+
+# Run this block to run JS
+```{r}
+## To edit:
+output_filename <- "joined.csv"
+##
+
+ruby_to_manu <- FALSE
+
+g <- "G:/Shared drives/American Conversations Project/"
+js_raw_path <- str_c(g,"JavaScript_Framing_Algo/js_output/12_7_24/raw/")
+output_path <- str_c(g,"JavaScript_Framing_Algo/js_output/12_7_24/clean/", output_filename)
+
+csv_files <- list.files(js_raw_path, pattern = "\\.csv$", full.names = TRUE)
+
+df_list <- list()
+for (file in csv_files) {
+  file_name <- tools::file_path_sans_ext(basename(file))
+  df_list[[file_name]] <- read.csv(file)
+  print(paste("Loaded:", file_name))
+}
+```
+
+# Join manual & algorithm coding
+```{r}
+df_list <- map(df_list, \(df){
+   df <- df |>
+     mutate(
+       fact_regex_num = str_c(
+       "fp1_num: ", str_count(fact_clauses, "fp1"), "; ",
+       "fp2_num: ", str_count(fact_clauses, "fp2"), "; ",
+       "fp3_num: ", str_count(fact_clauses, "fp3"), "; ",
+       "fp4_num: ", str_count(fact_clauses, "fp4"), "; ",
+       "fp5_num: ", str_count(fact_clauses, "fp5"), "; ",
+       "fp6_num: ", str_count(fact_clauses, "fp6"), "; ",
+       "fp7_num: ", str_count(fact_clauses, "fp7"), "; ",
+       "fp8_num: ", str_count(fact_clauses, "fp8"), "; ",
+       "fp9_num: ", str_count(fact_clauses, "fp9")
+       ),
+       
+       opinion_regex_num = str_c(
+       "op1_num: ", str_count(opinion_clauses, "op1"), "; ",
+       "op2_num: ", str_count(opinion_clauses, "op2"), "; ",
+       "op3_num: ", str_count(opinion_clauses, "op3"), "; ",
+       "op4_num: ", str_count(opinion_clauses, "op4"), "; ",
+       "op5_num: ", str_count(opinion_clauses, "op5")
+       ),
+       
+       nhs_regex_num = str_c(
+       "nhs1_num: ", str_count(nhs_clauses, "nhs1"), "; ",
+       "nhs2_num: ", str_count(nhs_clauses, "nhs2"), "; ",
+       "nhs3_num: ", str_count(nhs_clauses, "nhs3"), "; ",
+       "nhs4_num: ", str_count(nhs_clauses, "nhs4"), "; ",
+       "nhs5_num: ", str_count(nhs_clauses, "nhs5")
+       )
+     )
+})
+
+df_list$ca_T2_framing_output <- rename_with(
+  df_list$ca_T2_framing_output,
+  \(x){ifelse(!(x %in% c("part_id")),str_c("combined_response_", x), x)}
+  )
+
+df_list$grudge_time3_framing_output <- rename_with(
+  df_list$grudge_time3_framing_output,
+  \(x){ifelse(!(x %in% c("part_id")),str_c("grudge_open_", x), x)}
+  )
+
+df_list$open_ca_t1_framing_output <- rename_with(
+  df_list$open_ca_t1_framing_output,
+  \(x){ifelse(!(x %in% c("part_id")),str_c("response_", x), x)}
+  )
+
+df_list$reflections_time2_framing_output <- rename_with(
+  df_list$reflections_time2_framing_output,
+  \(x){ifelse(!(x %in% c("part_id")),str_c("complete_reflection_", x), x)}
+  )
+
+df_list$t3_ca_response_file_framing_output <- rename_with(
+  df_list$t3_ca_response_file_framing_output,
+  \(x){ifelse(!(x %in% c("part_id")),str_c("open_mike_", x), x)}
+  )
+
+df <- purrr::reduce(df_list, \(x, y) full_join(x, y, by = "part_id")) |>
+  select(-contains("status")) |>
+  rename_with(.cols = everything(), \(x) str_replace(x, "_t2$", "_num")) |>
+  relocate(part_id) |> relocate(contains("frames"), .after = last_col()) |>
+  rename(GLID = part_id)
+```
+
+## Export results 
+## Append summary to comparison table
+```{r}
+## Export
+if(ruby_to_manu == FALSE) {
+  write.csv(df, output_path)
+}
+```
