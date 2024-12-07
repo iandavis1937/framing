@@ -452,7 +452,9 @@ app.post('/string', async (req, res) => {
 });
 
 
-app.post('/csv', upload.single('csvFile'), async (req, res) => {  
+app.post('/csv', upload.single('csvFile'), async (req, res) => {
+    console.log("request: ", req.body);
+
     // Access the column names for the input text and case id sent with the form
     let id = req.body.id;
     console.log("ID column: ", id);
@@ -471,6 +473,9 @@ app.post('/csv', upload.single('csvFile'), async (req, res) => {
     // Parse the CSV file
     let fileData = await fs.readFile(csvFile.path, 'utf8');
     let loadedCSV = parseCSV(fileData, ",", input_colname);
+    
+    // Filter out rows where the ID column is blank or undefined
+    loadedCSV = loadedCSV.filter(row => row[id] !== undefined && row[id].trim() !== "");
     console.log("loadedCSV first row: ", loadedCSV[0])
     console.log("loadedCSV last row: ", loadedCSV[loadedCSV.length - 1])
     let finalResult

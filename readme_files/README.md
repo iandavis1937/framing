@@ -25,8 +25,12 @@ Once framing is deployed on a server, it can receive text inputs as individual s
  - To send input as a csv file, send an application/json POST request to  http://<your.server.ip.address>:8080/csv. The string's header should be 'participant_input'.
  
 ```bash
- # Ex. -- change IP address as needed
-curl -X POST -F "csvFile=@C:/.../study2.csv" http://localhost:8080/csv
+ # Ex. -- change IP address, ID column name, and text column name as needed
+curl -X POST \
+     -F "csvFile=@data/study2_head.csv" \
+     -F "id=part_id" \
+     -F "colname=open_response" \
+     http://localhost:8080/csv
 ```
 
 #### Qualtrics integration
